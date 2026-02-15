@@ -1,0 +1,125 @@
+@import '@fontsource/geist-sans/latin.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply font-sans antialiased;
+  }
+
+  html,
+  body,
+  #root {
+    height: 100%;
+    overflow-x: hidden;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply px-8 py-4 bg-white text-orange-primary font-bold text-lg relative overflow-hidden;
+    @apply hover:bg-gray-50 active:scale-95 transition-all duration-150;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06);
+  }
+
+  .btn-primary:hover {
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1), 0 2px 4px rgba(0, 0, 0, 0.06);
+  }
+
+  .btn-secondary {
+    @apply px-8 py-4 bg-transparent text-white border-2 border-white font-bold text-lg;
+    @apply hover:bg-white/10 active:scale-95 transition-all duration-150;
+  }
+
+  .card {
+    @apply bg-white;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.03);
+    transition: box-shadow 150ms ease, transform 150ms ease;
+  }
+
+  .card:hover {
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07), 0 2px 4px rgba(0, 0, 0, 0.05);
+  }
+
+  .gradient-orange {
+    background: linear-gradient(135deg, #ff6900 0%, #ff8533 100%);
+  }
+
+  .noise-overlay::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' /%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 1;
+  }
+}
+
+@layer utilities {
+  .animate-fade-in {
+    animation: fadeIn 0.4s ease-out both;
+  }
+
+  .animate-slide-up {
+    animation: slideUp 0.4s ease-out both;
+  }
+
+  .animate-scale-in {
+    animation: scaleIn 0.35s ease-out both;
+  }
+
+  .delay-75 {
+    animation-delay: 75ms;
+  }
+  .delay-150 {
+    animation-delay: 150ms;
+  }
+  .delay-225 {
+    animation-delay: 225ms;
+  }
+  .delay-300 {
+    animation-delay: 300ms;
+  }
+  .delay-375 {
+    animation-delay: 375ms;
+  }
+  .delay-450 {
+    animation-delay: 450ms;
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.65; }
+}
+
+.animate-pulse-slow {
+  animation: pulse 2.5s ease-in-out infinite;
+}
+
+@keyframes floatUp {
+  0% { transform: translate(-50%, 0); opacity: 1; }
+  100% { transform: translate(-50%, -120px); opacity: 0; }
+}
+
+@keyframes floatGlobal {
+  0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(-100vh) rotate(360deg); opacity: 0; }
+}
