@@ -1,34 +1,71 @@
+import { io, Socket } from 'socket.io-client';
+import { GameSettings } from '../types/game.types';
+import { ServerToClientEvents, ClientToServerEvents } from '../types/socket.types';
+import { SOCKET_URL } from '../constants/game.constants';
+
+type TypedSocket = Socket<ServerToClientEvents, ClientToServerEvents>;
+
 class SocketService {
-  connect() {
-    console.log('Socket.io: Connect (placeholder)');
+  private socket: TypedSocket | null = null;
+
+  connect(): TypedSocket {
+    if (this.socket?.connected) return this.socket;
+
+    this.socket = io(SOCKET_URL, {
+      transports: ['websocket'],
+      autoConnect: true,
+    }) as TypedSocket;
+
+    this.socket.on('connect', () => {
+      console.log('[socket] connected', this.socket?.id);
+    });
+
+    this.socket.on('disconnect', (reason) => {
+      console.log('[socket] disconnected', reason);
+    });
+
+    this.socket.on('connect_error', (err) => {
+      console.error('[socket] connection error', err.message);
+    });
+
+    return this.socket;
   }
 
   disconnect() {
-    console.log('Socket.io: Disconnect (placeholder)');
+    this.socket?.disconnect();
+    this.socket = null;
   }
 
-  createRoom(_playerName: string) {
-    console.log('Socket.io: Create room (placeholder)');
+  getSocket(): TypedSocket | null {
+    return this.socket;
   }
 
-  joinRoom(_roomCode: string, _playerName: string) {
-    console.log('Socket.io: Join room (placeholder)');
+  // ---------------------------------------------------------------------------
+  // Emit helpers (Client → Server)
+  // ---------------------------------------------------------------------------
+
+  createRoom(playerName: string) {
+    this.socket?.emit('room:create', playerName);
   }
 
-  removePlayer(_playerId: string) {
-    console.log('Socket.io: Remove player (placeholder)');
+  joinRoom(roomCode: string, playerName: string) {
+    this.socket?.emit('room:join', { roomCode, playerName });
+  }
+
+  removePlayer(playerId: string) {
+    this.socket?.emit('player:remove', playerId);
   }
 
   startGame() {
-    console.log('Socket.io: Start game (placeholder)');
+    this.socket?.emit('game:start');
   }
 
-  updateSettings(_settings: Record<string, unknown>) {
-    console.log('Socket.io: Update settings (placeholder)');
+  updateSettings(settings: Partial<GameSettings>) {
+    this.socket?.emit('settings:update', settings);
   }
 
-  submitPhoto(_roundId: string, _photoUrl: string) {
-    console.log('Socket.io: Submit photo (placeholder)');
+  submitPhoto(roundId: string, photoUrl: string) {
+    this.socket?.emit('photo:submit', { roundId, photoUrl });
   }
 }
 
