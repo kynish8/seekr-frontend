@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Logo } from '../components/ui/Logo';
 import { useGameStore } from '../store/gameStore';
 import { RankedPlayer } from '../types/game.types';
+import { socketService } from '../services/socket.service';
 
 export function ResultsScreen() {
   const navigate = useNavigate();
@@ -18,6 +19,7 @@ export function ResultsScreen() {
   const [first, second, third] = podiumPlayers;
 
   const handlePlayAgain = () => {
+    socketService.disconnect();
     resetGame();
     navigate('/');
   };

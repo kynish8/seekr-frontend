@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Logo } from "../components/ui/Logo";
 import { useGameStore } from "../store/gameStore";
-import { generateRoomCode } from "../utils/mockData";
+import { socketService } from "../services/socket.service";
 
 export function HomeScreen() {
   const [createName, setCreateName] = useState("");
@@ -10,11 +10,13 @@ export function HomeScreen() {
   const [roomCode, setRoomCode] = useState("");
   const [createError, setCreateError] = useState("");
   const [joinError, setJoinError] = useState("");
+  const [isConnecting, setIsConnecting] = useState(false);
   const navigate = useNavigate();
   const {
     setRoomCode: setStoreRoomCode,
     setIsHost,
-    addPlayer,
+    setPlayers,
+    updateSettings,
     setCurrentPlayerId,
     setHostId,
   } = useGameStore();
@@ -25,19 +27,33 @@ export function HomeScreen() {
       return;
     }
     setCreateError("");
-    const code = generateRoomCode();
-    const playerId = "1";
-    setStoreRoomCode(code);
-    setIsHost(true);
-    setHostId(playerId);
-    setCurrentPlayerId(playerId);
-    addPlayer({
-      id: playerId,
-      name: createName.trim().toUpperCase(),
-      initials: createName.charAt(0).toUpperCase(),
-      score: 0,
+    setIsConnecting(true);
+
+    const socket = socketService.connect();
+
+    // room:created fires first with the room code
+    socket.once("room:created", (data) => {
+      setStoreRoomCode(data.roomCode);
     });
-    navigate("/lobby");
+
+    // room:joined fires next with full state
+    socket.once("room:joined", (data) => {
+      setPlayers(data.players);
+      updateSettings(data.settings);
+      setCurrentPlayerId(data.playerId);
+      setHostId(data.hostId);
+      setIsHost(true);
+      setIsConnecting(false);
+      navigate("/lobby");
+    });
+
+    socket.once("error", (data) => {
+      setCreateError(data.message);
+      setIsConnecting(false);
+      socketService.disconnect();
+    });
+
+    socketService.createRoom(createName.trim());
   };
 
   const handleJoinGame = () => {
@@ -50,17 +66,28 @@ export function HomeScreen() {
       return;
     }
     setJoinError("");
-    const playerId = "2";
-    setStoreRoomCode(roomCode);
-    setIsHost(false);
-    setCurrentPlayerId(playerId);
-    addPlayer({
-      id: playerId,
-      name: joinName.trim().toUpperCase(),
-      initials: joinName.charAt(0).toUpperCase(),
-      score: 0,
+    setIsConnecting(true);
+
+    const socket = socketService.connect();
+
+    socket.once("room:joined", (data) => {
+      setStoreRoomCode(roomCode.trim().toUpperCase());
+      setPlayers(data.players);
+      updateSettings(data.settings);
+      setCurrentPlayerId(data.playerId);
+      setHostId(data.hostId);
+      setIsHost(false);
+      setIsConnecting(false);
+      navigate("/lobby");
     });
-    navigate("/lobby");
+
+    socket.once("error", (data) => {
+      setJoinError(data.message);
+      setIsConnecting(false);
+      socketService.disconnect();
+    });
+
+    socketService.joinRoom(roomCode.trim(), joinName.trim());
   };
 
   return (
@@ -133,6 +160,7 @@ export function HomeScreen() {
                 onKeyDown={(e) => e.key === "Enter" && handleCreateGame()}
                 className="w-full px-4 py-3 bg-white/15 border border-white/25 text-white placeholder-white/50 font-medium text-base focus:outline-none focus:border-white/60 focus:bg-white/20 transition-all duration-150 mb-3"
                 autoComplete="off"
+                disabled={isConnecting}
               />
               {createError && (
                 <p className="text-white/80 text-xs mb-3 -mt-1">
@@ -141,9 +169,10 @@ export function HomeScreen() {
               )}
               <button
                 onClick={handleCreateGame}
-                className="w-full py-4 bg-white text-orange-primary font-bold text-base tracking-wide hover:bg-gray-50 active:scale-[0.98] transition-all duration-150 shadow-lg hover:shadow-xl"
+                disabled={isConnecting}
+                className="w-full py-4 bg-white text-orange-primary font-bold text-base tracking-wide hover:bg-gray-50 active:scale-[0.98] transition-all duration-150 shadow-lg hover:shadow-xl disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                CREATE GAME
+                {isConnecting ? "CONNECTING..." : "CREATE GAME"}
               </button>
             </div>
 
@@ -173,6 +202,7 @@ export function HomeScreen() {
                 onKeyDown={(e) => e.key === "Enter" && handleJoinGame()}
                 className="w-full px-4 py-3 bg-white/15 border border-white/25 text-white placeholder-white/50 font-medium text-base focus:outline-none focus:border-white/60 focus:bg-white/20 transition-all duration-150 mb-3"
                 autoComplete="off"
+                disabled={isConnecting}
               />
               <input
                 type="text"
@@ -186,15 +216,17 @@ export function HomeScreen() {
                 className="w-full px-4 py-3 bg-white/15 border border-white/25 text-white placeholder-white/50 font-medium text-base focus:outline-none focus:border-white/60 focus:bg-white/20 transition-all duration-150 mb-3"
                 maxLength={6}
                 autoComplete="off"
+                disabled={isConnecting}
               />
               {joinError && (
                 <p className="text-white/80 text-xs mb-3 -mt-1">{joinError}</p>
               )}
               <button
                 onClick={handleJoinGame}
-                className="w-full py-4 bg-orange-dark text-white font-bold text-base tracking-wide hover:bg-orange-primary active:scale-[0.98] transition-all duration-150 shadow-lg hover:shadow-xl"
+                disabled={isConnecting}
+                className="w-full py-4 bg-orange-dark text-white font-bold text-base tracking-wide hover:bg-orange-primary active:scale-[0.98] transition-all duration-150 shadow-lg hover:shadow-xl disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                JOIN GAME
+                {isConnecting ? "CONNECTING..." : "JOIN GAME"}
               </button>
             </div>
           </div>
