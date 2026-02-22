@@ -1,8 +1,9 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import toast from "react-hot-toast";
 import { Logo } from "../components/ui/Logo";
 import { useGameStore } from "../store/gameStore";
-import { ROUND_OPTIONS, TIME_OPTIONS } from "../constants/game.constants";
+import { POINTS_OPTIONS, TIMEOUT_OPTIONS } from "../constants/game.constants";
 import { socketService } from "../services/socket.service";
 import { GameSettings } from "../types/game.types";
 
@@ -17,7 +18,6 @@ export function LobbyScreen() {
     updateSettings,
     addPlayer,
     removePlayer,
-    setRounds,
   } = useGameStore();
 
   useEffect(() => {
@@ -47,8 +47,7 @@ export function LobbyScreen() {
       updateSettings(newSettings);
     });
 
-    socket.on("game:started", ({ rounds }) => {
-      setRounds(rounds);
+    socket.on("game:started", () => {
       navigate("/game");
     });
 
@@ -58,19 +57,12 @@ export function LobbyScreen() {
       socket.off("settings:updated");
       socket.off("game:started");
     };
-  }, [
-    addPlayer,
-    removePlayer,
-    updateSettings,
-    setRounds,
-    navigate,
-    currentPlayerId,
-  ]);
+  }, [addPlayer, removePlayer, updateSettings, navigate, currentPlayerId]);
 
   const handleCopyRoomCode = () => {
     if (roomCode) {
       navigator.clipboard.writeText(roomCode);
-      alert("Room code copied!");
+      toast("COPIED!");
     }
   };
 
@@ -87,7 +79,7 @@ export function LobbyScreen() {
   };
 
   const handleSettingsChange = (patch: Partial<GameSettings>) => {
-    updateSettings(patch); // optimistic local update
+    updateSettings(patch);
     socketService.updateSettings(patch);
   };
 
@@ -193,16 +185,18 @@ export function LobbyScreen() {
             <div className="space-y-6">
               <div>
                 <label className="block text-xs font-bold text-gray-700 mb-3 uppercase tracking-wide">
-                  Rounds
+                  Points to Win
                 </label>
                 <div className="flex gap-2">
-                  {ROUND_OPTIONS.map((option) => (
+                  {POINTS_OPTIONS.map((option) => (
                     <button
                       key={option}
-                      onClick={() => handleSettingsChange({ rounds: option })}
+                      onClick={() =>
+                        handleSettingsChange({ pointsToWin: option })
+                      }
                       className={`flex-1 py-3 font-bold text-lg transition-all duration-150
                                   hover:scale-105 active:scale-95 ${
-                                    settings.rounds === option
+                                    settings.pointsToWin === option
                                       ? "bg-orange-primary text-white shadow-md"
                                       : "bg-white text-gray-700 hover:bg-gray-50 shadow-sm"
                                   }`}
@@ -215,18 +209,18 @@ export function LobbyScreen() {
 
               <div>
                 <label className="block text-xs font-bold text-gray-700 mb-3 uppercase tracking-wide">
-                  Time Per Round
+                  Round Timeout
                 </label>
                 <div className="flex gap-2">
-                  {TIME_OPTIONS.map((option) => (
+                  {TIMEOUT_OPTIONS.map((option) => (
                     <button
                       key={option}
                       onClick={() =>
-                        handleSettingsChange({ timePerRound: option })
+                        handleSettingsChange({ roundTimeout: option })
                       }
                       className={`flex-1 py-3 font-bold text-lg transition-all duration-150
                                   hover:scale-105 active:scale-95 ${
-                                    settings.timePerRound === option
+                                    settings.roundTimeout === option
                                       ? "bg-orange-primary text-white shadow-md"
                                       : "bg-white text-gray-700 hover:bg-gray-50 shadow-sm"
                                   }`}

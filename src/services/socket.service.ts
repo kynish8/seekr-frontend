@@ -64,8 +64,8 @@ class SocketService {
     this.socket?.emit('settings:update', settings);
   }
 
-  submitPhoto(roundId: string, photoUrl: string) {
-    this.socket?.emit('photo:submit', { roundId, photoUrl });
+  submitFrame(frameData: string) {
+    this.socket?.emit('frame:submit', { frameData });
   }
 }
 

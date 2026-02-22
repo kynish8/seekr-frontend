@@ -10,9 +10,7 @@ interface GameStore extends GameState {
   addPlayer: (player: Player) => void;
   removePlayer: (playerId: string) => void;
   updateSettings: (settings: Partial<GameSettings>) => void;
-  setRounds: (rounds: Round[]) => void;
-  updateRound: (round: Round) => void;
-  setCurrentRound: (roundIndex: number) => void;
+  setCurrentRound: (round: Round | null) => void;
   setHostId: (hostId: string) => void;
   setIsHost: (isHost: boolean) => void;
   setCurrentPlayerId: (playerId: string) => void;
@@ -23,8 +21,7 @@ const initialState: GameState = {
   roomCode: null,
   players: [],
   settings: DEFAULT_SETTINGS,
-  currentRound: 0,
-  rounds: [],
+  currentRound: null,
   hostId: null,
   isHost: false,
   currentPhase: 'home',
@@ -32,7 +29,7 @@ const initialState: GameState = {
 
 const initialExtendedState = {
   ...initialState,
-  currentPlayerId: null,
+  currentPlayerId: null as string | null,
 };
 
 export const useGameStore = create<GameStore>((set) => ({
@@ -57,14 +54,7 @@ export const useGameStore = create<GameStore>((set) => ({
       settings: { ...state.settings, ...settings },
     })),
 
-  setRounds: (rounds) => set({ rounds }),
-
-  updateRound: (round) =>
-    set((state) => ({
-      rounds: state.rounds.map((r) => (r.id === round.id ? round : r)),
-    })),
-
-  setCurrentRound: (roundIndex) => set({ currentRound: roundIndex }),
+  setCurrentRound: (round) => set({ currentRound: round }),
 
   setHostId: (hostId) => set({ hostId }),
 

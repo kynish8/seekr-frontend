@@ -1,4 +1,4 @@
-import { Player, GameSettings, Round } from './game.types';
+import { Player, GameSettings } from './game.types';
 
 export interface ServerToClientEvents {
   'room:created': (data: { roomCode: string }) => void;
@@ -10,12 +10,40 @@ export interface ServerToClientEvents {
   }) => void;
   'player:joined': (player: Player) => void;
   'player:left': (playerId: string) => void;
-  'game:started': (data: { rounds: Round[] }) => void;
-  'round:update': (round: Round) => void;
-  'game:ended': (data: { players: Player[] }) => void;
+  'game:started': (data: { players: Player[]; settings: GameSettings }) => void;
+  'round:start': (data: {
+    roundNumber: number;
+    objectId: string;
+    displayName: string;
+    timeoutSeconds: number;
+    players: Player[];
+    scores: Record<string, number>;
+  }) => void;
+  'frame:result': (data: {
+    label: string;
+    score: number;
+    confidence: number;
+  }) => void;
+  'round:won': (data: {
+    winnerId: string;
+    winnerName: string;
+    objectId: string;
+    displayName: string;
+    players: Player[];
+    scores: Record<string, number>;
+  }) => void;
+  'round:timeout': (data: {
+    objectId: string;
+    displayName: string;
+    scores: Record<string, number>;
+  }) => void;
+  'game:ended': (data: {
+    winnerId: string;
+    winnerName: string;
+    players: Player[];
+    scores: Record<string, number>;
+  }) => void;
   'settings:updated': (settings: GameSettings) => void;
-  'players:updated': (data: { players: Player[] }) => void;
-  'submission:rejected': (data: { reason: string }) => void;
   'error': (data: { message: string }) => void;
 }
 
@@ -25,5 +53,5 @@ export interface ClientToServerEvents {
   'player:remove': (playerId: string) => void;
   'game:start': () => void;
   'settings:update': (settings: Partial<GameSettings>) => void;
-  'photo:submit': (data: { roundId: string; photoUrl: string }) => void;
+  'frame:submit': (data: { frameData: string }) => void;
 }

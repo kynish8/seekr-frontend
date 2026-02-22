@@ -5,27 +5,28 @@ export interface Player {
   name: string;
   score: number;
   initials: string;
-  photoUrl?: string;
 }
 
 export interface GameSettings {
-  rounds: 3 | 5 | 8;
-  timePerRound: 30 | 60 | 120;
+  pointsToWin: number;
+  roundTimeout: number;
 }
 
 export interface Round {
   id: string;
-  prompt: string;
-  submissions: Record<string, string | null>;
-  timeRemaining: number;
+  roundNumber: number;
+  objectId: string;
+  displayName: string;
+  winnerId: string | null;
+  winnerName: string | null;
+  timeoutSeconds: number;
 }
 
 export interface GameState {
   roomCode: string | null;
   players: Player[];
   settings: GameSettings;
-  currentRound: number;
-  rounds: Round[];
+  currentRound: Round | null;
   hostId: string | null;
   isHost: boolean;
   currentPhase: GamePhase;

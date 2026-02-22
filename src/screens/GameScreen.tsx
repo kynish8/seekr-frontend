@@ -1,313 +1,374 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
+import { useGameStore } from "../store/gameStore";
+import { socketService } from "../services/socket.service";
+import { Round } from "../types/game.types";
 import {
   EmojiReactionButton,
   GlobalEmojiReactions,
 } from "../components/ui/EmojiReaction";
-import { useGameStore } from "../store/gameStore";
-import { socketService } from "../services/socket.service";
 
 const REACTION_EMOJIS = ["👍", "❤️", "😂", "🔥"];
-const MAX_PHOTO_PX = 640;
-
-async function resizeAndEncode(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    const url = URL.createObjectURL(file);
-    img.onload = () => {
-      URL.revokeObjectURL(url);
-      const scale = Math.min(
-        MAX_PHOTO_PX / img.width,
-        MAX_PHOTO_PX / img.height,
-        1,
-      );
-      const canvas = document.createElement("canvas");
-      canvas.width = Math.round(img.width * scale);
-      canvas.height = Math.round(img.height * scale);
-      const ctx = canvas.getContext("2d");
-      if (!ctx) {
-        reject(new Error("no canvas context"));
-        return;
-      }
-      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-      resolve(canvas.toDataURL("image/jpeg", 0.8));
-    };
-    img.onerror = reject;
-    img.src = url;
-  });
-}
+const FRAME_INTERVAL_MS = 200;
 
 export function GameScreen() {
   const navigate = useNavigate();
-  const {
-    rounds,
-    currentRound,
-    players,
-    settings,
-    currentPlayerId,
-    setCurrentRound,
-    updateRound,
-    setPlayers,
-  } = useGameStore();
+  const { currentRound, players, settings, currentPlayerId, setCurrentRound, setPlayers } =
+    useGameStore();
 
-  const [timeRemaining, setTimeRemaining] = useState<number>(
-    settings.timePerRound,
-  );
+  const [timeRemaining, setTimeRemaining] = useState<number>(0);
+  const [confidence, setConfidence] = useState<number>(0);
+  const [winnerOverlay, setWinnerOverlay] = useState<{
+    name: string;
+    isYou: boolean;
+    objectName: string;
+  } | null>(null);
+  const [timeoutOverlay, setTimeoutOverlay] = useState<string | null>(null);
+  const [cameraError, setCameraError] = useState<string | null>(null);
   const [latestReaction, setLatestReaction] = useState<{
     emoji: string;
     timestamp: number;
   } | null>(null);
-  const [submitting, setSubmitting] = useState(false);
-  const [rejectionMsg, setRejectionMsg] = useState<string | null>(null);
 
-  const activeRoundIdRef = useRef<string | null>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const frameIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const currentRoundData = rounds[currentRound];
+  // ── Camera setup (once on mount) ─────────────────────────────────────────
+  useEffect(() => {
+    navigator.mediaDevices
+      .getUserMedia({ video: { facingMode: "user", width: 640, height: 480 } })
+      .then((stream) => {
+        streamRef.current = stream;
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+        }
+      })
+      .catch((err) => {
+        console.error("[camera]", err);
+        setCameraError("Camera access denied. Allow camera to play.");
+      });
 
-  // wire up socket listeners
+    return () => {
+      streamRef.current?.getTracks().forEach((t) => t.stop());
+    };
+  }, []);
+
+  // ── Frame capture loop (once on mount) ───────────────────────────────────
+  useEffect(() => {
+    frameIntervalRef.current = setInterval(() => {
+      const round = useGameStore.getState().currentRound;
+      if (!round || round.winnerId !== null) return;
+
+      const video = videoRef.current;
+      const canvas = canvasRef.current;
+      if (!video || !canvas || video.readyState < 2) return;
+
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
+
+      canvas.width = 224;
+      canvas.height = 224;
+      ctx.drawImage(video, 0, 0, 224, 224);
+      const frameData = canvas.toDataURL("image/jpeg", 0.7);
+
+      socketService.submitFrame(frameData);
+    }, FRAME_INTERVAL_MS);
+
+    return () => {
+      if (frameIntervalRef.current) clearInterval(frameIntervalRef.current);
+    };
+  }, []);
+
+  // ── Socket event listeners ────────────────────────────────────────────────
   useEffect(() => {
     const socket = socketService.getSocket();
     if (!socket) return;
 
-    const handleRoundUpdate = (round: typeof currentRoundData) => {
-      updateRound(round);
-      setTimeRemaining(round.timeRemaining);
+    socket.on("round:start", (data) => {
+      const round: Round = {
+        id: String(data.roundNumber),
+        roundNumber: data.roundNumber,
+        objectId: data.objectId,
+        displayName: data.displayName,
+        winnerId: null,
+        winnerName: null,
+        timeoutSeconds: data.timeoutSeconds,
+      };
+      setCurrentRound(round);
+      setPlayers(data.players);
+      setConfidence(0);
+      setWinnerOverlay(null);
+      setTimeoutOverlay(null);
+    });
 
-      if (round.id !== activeRoundIdRef.current) {
-        activeRoundIdRef.current = round.id;
-        const { rounds: storeRounds } = useGameStore.getState();
-        const roundIndex = storeRounds.findIndex((r) => r.id === round.id);
-        if (roundIndex !== -1) {
-          setCurrentRound(roundIndex);
-        }
-      }
-    };
+    socket.on("frame:result", ({ confidence: c }) => {
+      setConfidence(c);
+    });
 
-    const handleGameEnded = ({
-      players: finalPlayers,
-    }: {
-      players: typeof players;
-    }) => {
-      setPlayers(finalPlayers);
+    socket.on("round:won", (data) => {
+      setPlayers(data.players);
+      setCurrentRound({
+        ...useGameStore.getState().currentRound!,
+        winnerId: data.winnerId,
+        winnerName: data.winnerName,
+      });
+      setConfidence(0);
+      setWinnerOverlay({
+        name: data.winnerName,
+        isYou: data.winnerId === useGameStore.getState().currentPlayerId,
+        objectName: data.displayName,
+      });
+    });
+
+    socket.on("round:timeout", (data) => {
+      setTimeoutOverlay(data.displayName);
+      setCurrentRound({
+        ...useGameStore.getState().currentRound!,
+        winnerId: "timeout",
+        winnerName: null,
+      });
+      setConfidence(0);
+    });
+
+    socket.on("game:ended", (data) => {
+      setPlayers(data.players);
       navigate("/results");
-    };
-
-    const handlePlayersUpdated = ({
-      players: updatedPlayers,
-    }: {
-      players: typeof players;
-    }) => {
-      setPlayers(updatedPlayers);
-    };
-
-    const handleRejection = ({ reason }: { reason: string }) => {
-      setRejectionMsg(reason);
-      setSubmitting(false);
-      setTimeout(() => setRejectionMsg(null), 3000);
-    };
-
-    socket.on("round:update", handleRoundUpdate);
-    socket.on("game:ended", handleGameEnded);
-    socket.on("players:updated", handlePlayersUpdated);
-    socket.on("submission:rejected", handleRejection);
+    });
 
     return () => {
-      socket.off("round:update", handleRoundUpdate);
-      socket.off("game:ended", handleGameEnded);
-      socket.off("players:updated", handlePlayersUpdated);
-      socket.off("submission:rejected", handleRejection);
+      socket.off("round:start");
+      socket.off("frame:result");
+      socket.off("round:won");
+      socket.off("round:timeout");
+      socket.off("game:ended");
     };
-  }, [updateRound, setCurrentRound, setPlayers, navigate]);
+  }, [setCurrentRound, setPlayers, navigate]);
 
-  if (!currentRoundData)
+  // ── Local countdown timer (resets per round) ──────────────────────────────
+  useEffect(() => {
+    if (timerRef.current) clearInterval(timerRef.current);
+    if (!currentRound || currentRound.winnerId !== null) return;
+
+    setTimeRemaining(currentRound.timeoutSeconds);
+
+    timerRef.current = setInterval(() => {
+      setTimeRemaining((t) => {
+        if (t <= 1) {
+          clearInterval(timerRef.current!);
+          return 0;
+        }
+        return t - 1;
+      });
+    }, 1000);
+
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, [currentRound?.id]);
+
+  const handleReaction = useCallback((emoji: string) => {
+    setLatestReaction({ emoji, timestamp: Date.now() });
+  }, []);
+
+  const myScore = players.find((p) => p.id === currentPlayerId)?.score ?? 0;
+  const timeout = currentRound?.timeoutSeconds ?? settings.roundTimeout;
+  const timerPercent = timeout > 0 ? (timeRemaining / timeout) * 100 : 0;
+  const timerRed = timeRemaining <= 10 && timeRemaining > 0;
+
+  // ── Waiting for first round ───────────────────────────────────────────────
+  if (!currentRound) {
     return (
-      <div className="flex items-center justify-center h-screen text-gray-500">
-        Loading game...
+      <div className="h-screen bg-gray-900 flex items-center justify-center">
+        <div className="text-white text-center">
+          <div className="text-4xl font-display mb-3">GET READY</div>
+          <div className="text-gray-400 animate-pulse">First round starting...</div>
+        </div>
       </div>
     );
-
-  const alreadySubmitted =
-    currentPlayerId != null && currentPlayerId in currentRoundData.submissions;
-
-  const handlePhotoSubmit = async (file: File) => {
-    if (!currentRoundData || alreadySubmitted || submitting) return;
-    setSubmitting(true);
-    setRejectionMsg(null);
-    try {
-      const photoUrl = await resizeAndEncode(file);
-      socketService.submitPhoto(currentRoundData.id, photoUrl);
-    } catch {
-      setSubmitting(false);
-    }
-  };
-
-  const handleReaction = (emoji: string) => {
-    setLatestReaction({ emoji, timestamp: Date.now() });
-  };
+  }
 
   return (
-    <div className="h-screen bg-gray-100 flex flex-col overflow-hidden relative">
-      <GlobalEmojiReactions
-        reactions={latestReaction ? [latestReaction] : []}
-      />
+    <div className="h-screen bg-gray-900 flex flex-col overflow-hidden relative">
+      {/* Hidden canvas for frame capture */}
+      <canvas ref={canvasRef} className="hidden" />
 
-      <div className="bg-white border-b border-gray-300 px-6 py-3 shadow-sm animate-slide-up">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-8">
-            <div>
-              <div className="text-xs text-gray-500 font-bold uppercase tracking-wide">
-                Round
-              </div>
-              <div className="text-2xl font-display text-orange-primary">
-                {currentRound + 1}/{rounds.length}
-              </div>
+      {/* Emoji reactions */}
+      <GlobalEmojiReactions reactions={latestReaction ? [latestReaction] : []} />
+
+      {/* Winner overlay */}
+      {winnerOverlay && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/70 animate-fade-in">
+          <div className="text-center px-8">
+            <div className="text-6xl mb-4">🏆</div>
+            <div className="text-5xl font-display text-white mb-2">
+              {winnerOverlay.isYou ? "YOU FOUND IT!" : `${winnerOverlay.name} WINS!`}
             </div>
-            <div>
-              <div className="text-xs text-gray-500 font-bold uppercase tracking-wide">
-                Time
-              </div>
-              <div
-                className={`text-2xl font-display ${timeRemaining <= 10 ? "text-red-600 animate-pulse-slow" : "text-gray-900"}`}
-              >
-                {timeRemaining}
-              </div>
+            <div className="text-xl text-gray-300 mb-4">
+              {winnerOverlay.objectName}
+            </div>
+            <div className="text-gray-400 animate-pulse text-sm">
+              Next round starting...
             </div>
           </div>
-          <div>
-            <div className="text-xs text-gray-500 font-bold text-right uppercase tracking-wide">
-              Your Score
-            </div>
-            <div className="text-2xl font-display text-gray-900">
-              {players.find((p) => p.id === currentPlayerId)?.score ?? 0}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="bg-gray-200 h-1 relative overflow-hidden">
-        <div
-          className="bg-gradient-to-r from-orange-primary to-orange-light h-full transition-all duration-1000"
-          style={{ width: `${(timeRemaining / settings.timePerRound) * 100}%` }}
-        />
-      </div>
-
-      <div className="gradient-orange py-5 px-6 shadow-md relative overflow-hidden">
-        <div className="max-w-7xl mx-auto relative z-10">
-          <h1 className="text-3xl md:text-4xl font-display text-white text-center tracking-tight animate-scale-in">
-            {currentRoundData.prompt}
-          </h1>
-        </div>
-      </div>
-
-      {rejectionMsg && (
-        <div className="absolute top-28 left-1/2 -translate-x-1/2 z-50 bg-red-600 text-white px-6 py-3 font-bold text-sm shadow-xl animate-fade-in">
-          {rejectionMsg}
         </div>
       )}
 
-      <div className="flex-1 px-6 py-6 overflow-hidden">
-        <div className="max-w-7xl mx-auto h-full">
-          <div className="grid grid-cols-2 gap-4 h-full">
-            {players.map((player, idx) => {
-              const submittedUrl = currentRoundData.submissions[player.id];
-              const isCurrentPlayer = player.id === currentPlayerId;
-              const hasSubmitted = player.id in currentRoundData.submissions;
+      {/* Timeout overlay */}
+      {timeoutOverlay && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/70 animate-fade-in">
+          <div className="text-center px-8">
+            <div className="text-6xl mb-4">⏰</div>
+            <div className="text-4xl font-display text-white mb-2">TIME'S UP</div>
+            <div className="text-xl text-gray-300 mb-4">
+              Nobody found the {timeoutOverlay}
+            </div>
+            <div className="text-gray-400 animate-pulse text-sm">
+              Next round starting...
+            </div>
+          </div>
+        </div>
+      )}
 
-              return (
-                <div
-                  key={player.id}
-                  className={`bg-navy-dark relative flex flex-col transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl animate-scale-in ${
-                    isCurrentPlayer
-                      ? "ring-4 ring-orange-primary shadow-2xl"
-                      : "hover:ring-2 hover:ring-gray-400"
-                  }`}
-                  style={{ animationDelay: `${idx * 100}ms` }}
-                >
-                  <div className="flex-1 flex items-center justify-center relative overflow-hidden group">
-                    {submittedUrl ? (
-                      <img
-                        src={submittedUrl}
-                        alt={`${player.name}'s submission`}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className="text-9xl font-display text-white/20 transition-all group-hover:scale-110">
-                        {player.initials}
-                      </div>
-                    )}
+      {/* Header bar */}
+      <div className="bg-gray-800 border-b border-gray-700 px-4 py-2.5 flex items-center justify-between shrink-0">
+        <div className="flex items-center gap-6">
+          <div>
+            <div className="text-xs text-gray-500 font-bold uppercase tracking-wide">Round</div>
+            <div className="text-xl font-display text-orange-400">
+              {currentRound.roundNumber}
+            </div>
+          </div>
+          <div>
+            <div className="text-xs text-gray-500 font-bold uppercase tracking-wide">Time</div>
+            <div
+              className={`text-xl font-display ${
+                timerRed ? "text-red-400 animate-pulse" : "text-white"
+              }`}
+            >
+              {timeRemaining}s
+            </div>
+          </div>
+        </div>
+        <div className="text-right">
+          <div className="text-xs text-gray-500 font-bold uppercase tracking-wide">Your Score</div>
+          <div className="text-xl font-display text-white">{myScore}</div>
+        </div>
+      </div>
 
-                    {isCurrentPlayer && !hasSubmitted && (
-                      <label className="absolute bottom-4 left-1/2 -translate-x-1/2 cursor-pointer z-10">
-                        <input
-                          type="file"
-                          accept="image/*"
-                          capture="environment"
-                          className="hidden"
-                          onChange={(e) => {
-                            const file = e.target.files?.[0];
-                            if (file) handlePhotoSubmit(file);
-                            e.target.value = ""; // allow re-selecting same file
-                          }}
-                          disabled={submitting}
-                        />
-                        <div
-                          className={`px-5 py-2 font-bold text-sm shadow-lg transition-all ${
-                            submitting
-                              ? "bg-gray-400 text-white cursor-not-allowed"
-                              : "bg-orange-primary text-white hover:bg-orange-light active:scale-95"
-                          }`}
-                        >
-                          {submitting ? "SUBMITTING..." : "SNAP IT"}
-                        </div>
-                      </label>
-                    )}
+      {/* Timer progress bar */}
+      <div className="bg-gray-700 h-1 shrink-0">
+        <div
+          className={`h-full transition-all duration-1000 ${
+            timerRed
+              ? "bg-red-500"
+              : "bg-gradient-to-r from-orange-500 to-orange-300"
+          }`}
+          style={{ width: `${timerPercent}%` }}
+        />
+      </div>
 
-                    {isCurrentPlayer && hasSubmitted && (
-                      <div className="absolute top-3 right-3 bg-green-500 text-white px-2 py-1 text-xs font-bold shadow-lg">
-                        SUBMITTED
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="bg-white p-3 flex items-center justify-between border-t-2 border-gray-200">
-                    <div className="font-bold text-gray-900">{player.name}</div>
-                    <div className="text-sm text-gray-600 font-semibold">
-                      {player.score} PTS
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
+      {/* Object banner */}
+      <div className="gradient-orange px-4 py-4 shrink-0">
+        <div className="text-center">
+          <div className="text-xs text-white/60 font-bold tracking-widest uppercase mb-1">
+            Find This
+          </div>
+          <div className="text-3xl md:text-4xl font-display text-white tracking-tight">
+            {currentRound.displayName}
           </div>
         </div>
       </div>
 
-      <div className="bg-white border-t border-gray-300 px-6 py-3 shadow-lg">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <span className="text-xs font-bold text-gray-500 uppercase tracking-wide">
-              React
-            </span>
-            {REACTION_EMOJIS.map((emoji) => (
-              <EmojiReactionButton
-                key={emoji}
-                emoji={emoji}
-                onReact={handleReaction}
+      {/* Main content: camera + other players */}
+      <div className="flex-1 flex gap-2 p-3 overflow-hidden min-h-0">
+
+        {/* Camera — current player */}
+        <div className="flex-1 flex flex-col min-w-0">
+          <div className="relative flex-1 bg-black overflow-hidden ring-2 ring-orange-500">
+            {cameraError ? (
+              <div className="absolute inset-0 flex items-center justify-center text-gray-400 text-center p-4 text-sm">
+                {cameraError}
+              </div>
+            ) : (
+              <video
+                ref={videoRef}
+                autoPlay
+                playsInline
+                muted
+                className="w-full h-full object-cover scale-x-[-1]"
               />
+            )}
+            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-3">
+              <div className="font-bold text-white text-sm">
+                {players.find((p) => p.id === currentPlayerId)?.name ?? "YOU"}
+                <span className="text-orange-400 ml-1 text-xs">(YOU)</span>
+              </div>
+              <div className="text-orange-300 text-xs font-bold">{myScore} PTS</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Other players */}
+        {players.filter((p) => p.id !== currentPlayerId).length > 0 && (
+          <div className="flex flex-col gap-2 w-28 shrink-0">
+            {players
+              .filter((p) => p.id !== currentPlayerId)
+              .map((player) => (
+                <div
+                  key={player.id}
+                  className="flex-1 bg-gray-800 flex flex-col items-center justify-center text-center p-2 min-h-0"
+                >
+                  <div className="text-3xl font-display text-white/30 mb-1">
+                    {player.initials}
+                  </div>
+                  <div className="text-xs font-bold text-white truncate w-full text-center">
+                    {player.name}
+                  </div>
+                  <div className="text-xs text-orange-400 font-bold">
+                    {player.score} PTS
+                  </div>
+                </div>
+              ))}
+          </div>
+        )}
+      </div>
+
+      {/* Confidence bar */}
+      <div className="bg-gray-800 border-t border-gray-700 px-4 py-2.5 shrink-0">
+        <div className="flex items-center gap-3 mb-1">
+          <span className="text-sm">❄️</span>
+          <div className="flex-1 bg-gray-700 h-2.5 rounded-full overflow-hidden">
+            <div
+              className="h-full rounded-full transition-all duration-200"
+              style={{
+                width: `${confidence * 100}%`,
+                background: `linear-gradient(to right, #60a5fa, #f97316, #ef4444)`,
+              }}
+            />
+          </div>
+          <span className="text-sm">🔥</span>
+          <span className="text-xs text-gray-400 w-8 text-right">
+            {Math.round(confidence * 100)}%
+          </span>
+        </div>
+
+        {/* Standings + reactions */}
+        <div className="flex items-center justify-between mt-1.5">
+          <div className="flex items-center gap-1.5">
+            {REACTION_EMOJIS.map((emoji) => (
+              <EmojiReactionButton key={emoji} emoji={emoji} onReact={handleReaction} />
             ))}
           </div>
-          <div className="flex items-center gap-6 text-xs font-bold">
-            <span className="text-gray-500 uppercase tracking-wide">
-              Standings
-            </span>
+          <div className="flex items-center gap-3 text-xs font-bold">
             {[...players]
               .sort((a, b) => b.score - a.score)
               .map((p, idx) => (
                 <div
                   key={p.id}
-                  className={
-                    idx === 0 ? "text-orange-primary" : "text-gray-700"
-                  }
+                  className={idx === 0 ? "text-orange-400" : "text-gray-400"}
                 >
                   {idx + 1}. {p.name}{" "}
                   <span className="text-gray-500">{p.score}</span>
