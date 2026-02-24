@@ -282,7 +282,7 @@ export function GameScreen() {
         </div>
       </div>
 
-      {/* Main content: camera + other players */}
+      {/* Main content: camera + players */}
       <div className="flex-1 flex gap-2 p-3 overflow-hidden min-h-0">
 
         {/* Camera — current player */}
@@ -311,29 +311,38 @@ export function GameScreen() {
           </div>
         </div>
 
-        {/* Other players */}
-        {players.filter((p) => p.id !== currentPlayerId).length > 0 && (
-          <div className="flex flex-col gap-2 w-28 shrink-0">
-            {players
-              .filter((p) => p.id !== currentPlayerId)
-              .map((player) => (
+        {/* All players panel */}
+        <div className="flex flex-col gap-2 w-36 shrink-0">
+          {[...players]
+            .sort((a, b) => b.score - a.score)
+            .map((player, idx) => {
+              const isMe = player.id === currentPlayerId;
+              return (
                 <div
                   key={player.id}
-                  className="flex-1 bg-gray-800 flex flex-col items-center justify-center text-center p-2 min-h-0"
+                  className={`flex-1 flex flex-col items-center justify-center text-center p-2 min-h-0 relative
+                    ${isMe ? "ring-2 ring-orange-500 bg-gray-800" : "bg-gray-800/60"}`}
                 >
-                  <div className="text-3xl font-display text-white/30 mb-1">
+                  {idx === 0 && (
+                    <div className="absolute top-1 right-1 text-xs text-yellow-400">👑</div>
+                  )}
+                  <div
+                    className={`w-10 h-10 rounded-full flex items-center justify-center text-lg font-display mb-1
+                      ${isMe ? "bg-orange-500 text-white" : "bg-gray-700 text-white/60"}`}
+                  >
                     {player.initials}
                   </div>
                   <div className="text-xs font-bold text-white truncate w-full text-center">
                     {player.name}
+                    {isMe && <span className="text-orange-400 ml-1">(you)</span>}
                   </div>
-                  <div className="text-xs text-orange-400 font-bold">
+                  <div className="text-xs text-orange-400 font-bold mt-0.5">
                     {player.score} PTS
                   </div>
                 </div>
-              ))}
-          </div>
-        )}
+              );
+            })}
+        </div>
       </div>
 
       {/* Confidence bar */}
