@@ -43,6 +43,7 @@ export interface ServerToClientEvents {
     players: Player[];
     scores: Record<string, number>;
   }) => void;
+  'player:frame': (data: { playerId: string; frameData: string }) => void;
   'settings:updated': (settings: GameSettings) => void;
   'error': (data: { message: string }) => void;
 }
