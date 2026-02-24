@@ -29,6 +29,7 @@ export function GameScreen() {
     emoji: string;
     timestamp: number;
   } | null>(null);
+  const [playerFrames, setPlayerFrames] = useState<Record<string, string>>({});
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -138,12 +139,17 @@ export function GameScreen() {
       navigate("/results");
     });
 
+    socket.on("player:frame", ({ playerId, frameData }: { playerId: string; frameData: string }) => {
+      setPlayerFrames((prev) => ({ ...prev, [playerId]: frameData }));
+    });
+
     return () => {
       socket.off("round:start");
       socket.off("frame:result");
       socket.off("round:won");
       socket.off("round:timeout");
       socket.off("game:ended");
+      socket.off("player:frame");
     };
   }, [setCurrentRound, setPlayers, navigate]);
 
@@ -312,32 +318,44 @@ export function GameScreen() {
         </div>
 
         {/* All players panel */}
-        <div className="flex flex-col gap-2 w-36 shrink-0">
+        <div className="flex flex-col gap-2 w-44 shrink-0">
           {[...players]
             .sort((a, b) => b.score - a.score)
             .map((player, idx) => {
               const isMe = player.id === currentPlayerId;
+              const frame = playerFrames[player.id];
               return (
                 <div
                   key={player.id}
-                  className={`flex-1 flex flex-col items-center justify-center text-center p-2 min-h-0 relative
-                    ${isMe ? "ring-2 ring-orange-500 bg-gray-800" : "bg-gray-800/60"}`}
+                  className={`flex-1 flex flex-col min-h-0 relative overflow-hidden
+                    ${isMe ? "ring-2 ring-orange-500" : "ring-1 ring-gray-700"}`}
                 >
-                  {idx === 0 && (
-                    <div className="absolute top-1 right-1 text-xs text-yellow-400">👑</div>
-                  )}
-                  <div
-                    className={`w-10 h-10 rounded-full flex items-center justify-center text-lg font-display mb-1
-                      ${isMe ? "bg-orange-500 text-white" : "bg-gray-700 text-white/60"}`}
-                  >
-                    {player.initials}
+                  {/* Camera feed or initials placeholder */}
+                  <div className="flex-1 bg-black relative min-h-0">
+                    {frame ? (
+                      <img
+                        src={frame}
+                        className="w-full h-full object-cover scale-x-[-1]"
+                        alt={player.name}
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center bg-gray-800">
+                        <div className="text-2xl font-display text-white/30">
+                          {player.initials}
+                        </div>
+                      </div>
+                    )}
+                    {idx === 0 && (
+                      <div className="absolute top-1 right-1 text-sm">👑</div>
+                    )}
                   </div>
-                  <div className="text-xs font-bold text-white truncate w-full text-center">
-                    {player.name}
-                    {isMe && <span className="text-orange-400 ml-1">(you)</span>}
-                  </div>
-                  <div className="text-xs text-orange-400 font-bold mt-0.5">
-                    {player.score} PTS
+                  {/* Name + score bar */}
+                  <div className="bg-gray-900 px-2 py-1 shrink-0">
+                    <div className="text-xs font-bold text-white truncate">
+                      {player.name}
+                      {isMe && <span className="text-orange-400 ml-1">(you)</span>}
+                    </div>
+                    <div className="text-xs text-orange-400 font-bold">{player.score} PTS</div>
                   </div>
                 </div>
               );
