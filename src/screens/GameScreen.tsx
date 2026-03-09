@@ -260,13 +260,12 @@ export function GameScreen() {
 
   return (
     <div className="h-screen bg-[#F5F4F1] flex flex-col overflow-hidden relative">
-      {/* Hidden canvas for frame capture */}
       <canvas ref={canvasRef} className="hidden" />
 
       {winnerOverlay && (
         <div className="absolute inset-0 z-50 flex items-center justify-center bg-white/80 backdrop-blur-sm animate-fade-in">
           <div className="text-center px-8">
-            <div className="text-5xl mb-3">🏆</div>
+            <div className="w-10 h-1 bg-[#FF6900] mx-auto mb-4" />
             <div className="text-4xl font-display font-bold text-gray-900 mb-1">
               {winnerOverlay.isYou
                 ? "YOU FOUND IT!"
@@ -285,7 +284,7 @@ export function GameScreen() {
       {timeoutOverlay && (
         <div className="absolute inset-0 z-50 flex items-center justify-center bg-white/80 backdrop-blur-sm animate-fade-in">
           <div className="text-center px-8">
-            <div className="text-5xl mb-3">⏰</div>
+            <div className="w-10 h-1 bg-gray-400 mx-auto mb-4" />
             <div className="text-4xl font-display font-bold text-gray-900 mb-1">
               TIME'S UP
             </div>
@@ -302,7 +301,6 @@ export function GameScreen() {
       {isDisconnected && (
         <div className="absolute inset-0 z-[60] flex items-center justify-center bg-white/90 backdrop-blur-sm animate-fade-in">
           <div className="text-center px-8">
-            <div className="text-4xl mb-3">📡</div>
             <div className="text-2xl font-display font-bold text-gray-900 mb-1">
               CONNECTION LOST
             </div>
@@ -316,7 +314,6 @@ export function GameScreen() {
       {reconnectFailed && (
         <div className="absolute inset-0 z-[60] flex items-center justify-center bg-white/90 backdrop-blur-sm animate-fade-in">
           <div className="text-center px-8">
-            <div className="text-4xl mb-3">❌</div>
             <div className="text-2xl font-display font-bold text-gray-900 mb-2">
               DISCONNECTED
             </div>
@@ -441,22 +438,19 @@ export function GameScreen() {
                   </div>
                 )}
 
-                {/* Winner badge */}
                 {isWinner && (
                   <div className="absolute top-2 right-2 bg-[#FF6900] text-white text-[10px] font-bold px-2 py-0.5 tracking-wider">
                     +1 PT
                   </div>
                 )}
 
-                {/* Leading crown */}
                 {isLeader && !isWinner && (
-                  <div className="absolute top-1.5 right-2 text-sm leading-none">
-                    👑
+                  <div className="absolute top-2 right-2 bg-white/90 text-[#FF6900] text-[9px] font-bold px-1.5 py-0.5 tracking-wider">
+                    1ST
                   </div>
                 )}
               </div>
 
-              {/* Name / score bar */}
               <div className="bg-white border-t border-gray-100 px-3 py-1.5 flex items-center justify-between shrink-0">
                 <span className="font-bold text-gray-900 text-sm truncate leading-none">
                   {player.name}
@@ -475,12 +469,10 @@ export function GameScreen() {
         })}
       </div>
 
-      {/* ── Confidence bar + standings ───────────────────────────────────── */}
       <div className="bg-white border-t border-gray-200 px-5 py-2.5 shrink-0">
-        {/* Detection meter */}
         <div className="flex items-center gap-3 mb-1.5">
-          <span className="text-[10px] font-bold text-gray-400 tracking-[0.12em] uppercase w-14 shrink-0">
-            Detect
+          <span className="text-[10px] font-bold text-gray-400 tracking-[0.12em] uppercase shrink-0">
+            COLD
           </span>
           <div className="flex-1 bg-gray-100 h-1.5 rounded-full overflow-hidden">
             <div
@@ -491,12 +483,14 @@ export function GameScreen() {
               }}
             />
           </div>
+          <span className="text-[10px] font-bold text-gray-400 tracking-[0.12em] uppercase shrink-0">
+            HOT
+          </span>
           <span className="text-[11px] font-bold text-gray-500 tabular-nums w-8 text-right shrink-0">
             {Math.round(confidence * 100)}%
           </span>
         </div>
 
-        {/* Live standings */}
         <div className="flex items-center gap-3">
           <span className="text-[10px] font-bold text-gray-400 tracking-[0.12em] uppercase w-14 shrink-0">
             Rank

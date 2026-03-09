@@ -1,17 +1,19 @@
 interface LogoProps {
-  size?: 'sm' | 'md' | 'lg';
+  size?: "sm" | "md" | "lg";
 }
 
-export function Logo({ size = 'md' }: LogoProps) {
+export function Logo({ size = "md" }: LogoProps) {
   const sizeClasses = {
-    sm: 'text-lg',
-    md: 'text-xl',
-    lg: 'text-2xl',
+    sm: "text-xl",
+    md: "text-2xl",
+    lg: "text-3xl",
   };
 
   return (
-    <div className={`font-display text-white tracking-tight ${sizeClasses[size]}`}>
-      SEEKR
+    <div
+      className={`font-display font-black text-white tracking-tight leading-none ${sizeClasses[size]}`}
+    >
+      hullabaloo.
     </div>
   );
 }

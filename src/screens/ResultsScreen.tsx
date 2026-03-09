@@ -4,6 +4,7 @@ import toast from "react-hot-toast";
 import { useGameStore } from "../store/gameStore";
 import { RankedPlayer } from "../types/game.types";
 import { socketService } from "../services/socket.service";
+import { Logo } from "../components/ui/Logo";
 
 // Podium columns: left=2nd, center=1st, right=3rd
 // blockH uses clamp(min, preferred-vw, max) so the podium scales with window width
@@ -35,7 +36,7 @@ const PODIUM_COLS = [
 ];
 
 const RANK_SUBLABEL: Record<number, string> = {
-  1: "🏆 WINNER",
+  1: "WINNER",
   2: "2ND PLACE",
   3: "3RD PLACE",
 };
@@ -62,30 +63,22 @@ export function ResultsScreen() {
   };
 
   const handleShareResults = () => {
-    const text = `SEEKR Results!\n${ranked.map((p) => `${p.rank}. ${p.name} — ${p.score} PTS`).join("\n")}`;
+    const text = `hullabaloo Results!\n${ranked.map((p) => `${p.rank}. ${p.name} — ${p.score} PTS`).join("\n")}`;
     navigator.clipboard.writeText(text);
     toast.success("Results copied!");
   };
 
   return (
-    <div
-      className="min-h-screen flex flex-col overflow-x-hidden"
-      style={{ background: "#FF6900" }}
-    >
-      <header
-        className="px-6 py-4 shrink-0 animate-rise"
-        style={{ borderBottom: "1px solid rgba(255,255,255,0.3)" }}
-      >
-        <span className="text-sm font-bold text-white tracking-[0.22em] uppercase">
-          Seekr
-        </span>
+    <div className="min-h-screen gradient-orange noise-overlay flex flex-col overflow-x-hidden relative">
+      <header className="px-8 md:px-16 py-6 shrink-0 animate-rise relative z-10">
+        <Logo size="md" />
       </header>
 
-      <main className="flex-1 w-full max-w-lg mx-auto px-5 pb-10 flex flex-col gap-8">
+      <main className="flex-1 w-full max-w-lg mx-auto px-8 md:px-16 pb-10 flex flex-col gap-8 relative z-10">
         <div className="pt-6 animate-rise" style={{ animationDelay: "60ms" }}>
           <h1
-            className="font-display font-bold text-white leading-none tracking-tight"
-            style={{ fontSize: "clamp(3rem, 12vw, 5rem)" }}
+            className="font-display font-bold text-white leading-none tracking-tight text-center whitespace-nowrap"
+            style={{ fontSize: "clamp(2rem, 7vw, 3.5rem)" }}
           >
             GAME OVER
           </h1>
