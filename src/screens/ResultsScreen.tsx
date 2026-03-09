@@ -1,118 +1,233 @@
-import { useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Logo } from '../components/ui/Logo';
-import { useGameStore } from '../store/gameStore';
-import { RankedPlayer } from '../types/game.types';
-import { socketService } from '../services/socket.service';
+import { useMemo } from "react";
+import { useNavigate } from "react-router-dom";
+import toast from "react-hot-toast";
+import { useGameStore } from "../store/gameStore";
+import { RankedPlayer } from "../types/game.types";
+import { socketService } from "../services/socket.service";
+
+// Podium columns: left=2nd, center=1st, right=3rd
+// blockH uses clamp(min, preferred-vw, max) so the podium scales with window width
+const PODIUM_COLS = [
+  {
+    rankIndex: 1,
+    label: "2",
+    blockH: "clamp(70px, 16vw, 110px)",
+    blockBg: "#FDDCB5",
+    numColor: "#FF6900",
+    numSize: "clamp(2rem, 6vw, 3.5rem)",
+  },
+  {
+    rankIndex: 0,
+    label: "1",
+    blockH: "clamp(105px, 24vw, 165px)",
+    blockBg: "#ffffff",
+    numColor: "#FF6900",
+    numSize: "clamp(3rem, 9vw, 5rem)",
+  },
+  {
+    rankIndex: 2,
+    label: "3",
+    blockH: "clamp(48px, 11vw, 75px)",
+    blockBg: "#FDDCB5",
+    numColor: "#FF6900",
+    numSize: "clamp(1.75rem, 5vw, 3rem)",
+  },
+];
+
+const RANK_SUBLABEL: Record<number, string> = {
+  1: "🏆 WINNER",
+  2: "2ND PLACE",
+  3: "3RD PLACE",
+};
 
 export function ResultsScreen() {
   const navigate = useNavigate();
   const { players, resetGame } = useGameStore();
 
-  const rankedPlayers: RankedPlayer[] = useMemo(() => {
-    return [...players]
-      .sort((a, b) => b.score - a.score)
-      .map((player, index) => ({ ...player, rank: index + 1 }));
-  }, [players]);
+  const ranked: RankedPlayer[] = useMemo(
+    () =>
+      [...players]
+        .sort((a, b) => b.score - a.score)
+        .map((p, i) => ({ ...p, rank: i + 1 })),
+    [players],
+  );
 
-  const podiumPlayers = rankedPlayers.slice(0, 3);
-  const [first, second, third] = podiumPlayers;
+  // Always pad to 3 so we always render all 3 podium slots
+  const top3 = [ranked[0] ?? null, ranked[1] ?? null, ranked[2] ?? null];
 
   const handlePlayAgain = () => {
     socketService.disconnect();
     resetGame();
-    navigate('/');
+    navigate("/");
   };
 
   const handleShareResults = () => {
-    const resultsText = `SEEKR Game Results!\n${rankedPlayers
-      .map((p) => `${p.rank}. ${p.name} - ${p.score} PTS`)
-      .join('\n')}`;
-    navigator.clipboard.writeText(resultsText);
-    alert('Results copied to clipboard!');
+    const text = `SEEKR Results!\n${ranked.map((p) => `${p.rank}. ${p.name} — ${p.score} PTS`).join("\n")}`;
+    navigator.clipboard.writeText(text);
+    toast.success("Results copied!");
   };
 
   return (
-    <div className="min-h-screen gradient-orange text-white relative noise-overlay overflow-hidden">
-      <header className="py-5 px-8 md:px-12 relative z-10 animate-fade-in">
-        <Logo size="md" />
+    <div
+      className="min-h-screen flex flex-col overflow-x-hidden"
+      style={{ background: "#FF6900" }}
+    >
+      <header
+        className="px-6 py-4 shrink-0 animate-rise"
+        style={{ borderBottom: "1px solid rgba(255,255,255,0.3)" }}
+      >
+        <span className="text-sm font-bold text-white tracking-[0.22em] uppercase">
+          Seekr
+        </span>
       </header>
 
-      <main className="max-w-5xl mx-auto px-6 md:px-8 py-8 relative z-10">
-        <div className="mb-12 animate-slide-up">
-          <h1 className="text-6xl md:text-7xl font-display mb-2 tracking-tight">GAME OVER</h1>
-          <p className="text-lg opacity-80 font-medium">Final Results</p>
+      <main className="flex-1 w-full max-w-lg mx-auto px-5 pb-10 flex flex-col gap-8">
+        <div className="pt-6 animate-rise" style={{ animationDelay: "60ms" }}>
+          <h1
+            className="font-display font-bold text-white leading-none tracking-tight"
+            style={{ fontSize: "clamp(3rem, 12vw, 5rem)" }}
+          >
+            GAME OVER
+          </h1>
         </div>
 
-        <div className="mb-12 animate-scale-in delay-150">
-          <div className="flex items-end justify-center gap-6 h-64">
-            {second && (
-              <div className="flex flex-col items-center" style={{ width: '28%' }}>
-                <div className="bg-white text-orange-primary w-16 h-16 flex items-center justify-center mb-3 shadow-lg hover:scale-110 transition-transform">
-                  <span className="font-display text-3xl">2</span>
-                </div>
-                <div className="w-full bg-white/20 backdrop-blur-sm flex flex-col items-center justify-end pb-4 hover:bg-white/30 transition-all shadow-lg" style={{ height: '55%' }}>
-                  <div className="text-xl font-bold">{second.name}</div>
-                  <div className="text-sm opacity-80">{second.score} PTS</div>
-                </div>
-              </div>
-            )}
+        <div className="animate-rise" style={{ animationDelay: "160ms" }}>
+          <div className="flex items-end justify-center gap-3">
+            {PODIUM_COLS.map((col) => {
+              const player = top3[col.rankIndex];
+              return (
+                <div
+                  key={col.label}
+                  className="flex flex-col items-center"
+                  style={{ flex: "1 1 0", maxWidth: 160 }}
+                >
+                  <div
+                    className="w-full mb-3 flex flex-col items-center justify-center px-3 py-3"
+                    style={{
+                      background: "#ffffff",
+                      minHeight: "clamp(60px, 12vw, 80px)",
+                    }}
+                  >
+                    {player ? (
+                      <>
+                        <span
+                          className="font-bold text-center leading-tight truncate w-full text-center"
+                          style={{
+                            color: "#FF6900",
+                            fontSize:
+                              col.rankIndex === 0
+                                ? "clamp(0.9rem, 3.5vw, 1.25rem)"
+                                : "clamp(0.75rem, 2.8vw, 1rem)",
+                          }}
+                        >
+                          {player.name}
+                        </span>
+                        <span
+                          className="text-xs font-semibold mt-0.5 tabular-nums"
+                          style={{ color: "#555555" }}
+                        >
+                          {player.score} PTS
+                        </span>
+                      </>
+                    ) : (
+                      <span
+                        className="text-sm font-bold"
+                        style={{ color: "#e0c8b8" }}
+                      >
+                        —
+                      </span>
+                    )}
+                  </div>
 
-            {first && (
-              <div className="flex flex-col items-center" style={{ width: '28%' }}>
-                <div className="bg-white text-orange-primary w-20 h-20 flex items-center justify-center mb-3 shadow-xl hover:scale-110 transition-transform animate-pulse-slow">
-                  <span className="font-display text-4xl">1</span>
+                  <div
+                    className="w-full flex items-center justify-center"
+                    style={{ height: col.blockH, background: col.blockBg }}
+                  >
+                    <span
+                      className="font-display font-bold select-none"
+                      style={{
+                        fontSize: col.numSize,
+                        color: col.numColor,
+                        opacity: 0.35,
+                        lineHeight: 1,
+                      }}
+                    >
+                      {col.label}
+                    </span>
+                  </div>
                 </div>
-                <div className="w-full bg-white flex flex-col items-center justify-end pb-4 text-orange-primary hover:shadow-2xl transition-all shadow-xl" style={{ height: '75%' }}>
-                  <div className="text-2xl font-display">{first.name}</div>
-                  <div className="text-lg font-bold">{first.score} PTS</div>
-                </div>
-              </div>
-            )}
-
-            {third && (
-              <div className="flex flex-col items-center" style={{ width: '28%' }}>
-                <div className="bg-white text-orange-primary w-16 h-16 flex items-center justify-center mb-3 shadow-lg hover:scale-110 transition-transform">
-                  <span className="font-display text-3xl">3</span>
-                </div>
-                <div className="w-full bg-white/20 backdrop-blur-sm flex flex-col items-center justify-end pb-4 hover:bg-white/30 transition-all shadow-lg" style={{ height: '40%' }}>
-                  <div className="text-xl font-bold">{third.name}</div>
-                  <div className="text-sm opacity-80">{third.score} PTS</div>
-                </div>
-              </div>
-            )}
+              );
+            })}
           </div>
         </div>
 
-        <div className="mb-8 animate-slide-up delay-225">
-          <div className="text-xs font-bold opacity-60 mb-4 tracking-wider uppercase">Final Stats</div>
-          <div className="space-y-3">
-            {rankedPlayers.map((player, idx) => (
-              <div key={player.id} className="bg-white/10 backdrop-blur-sm p-4 flex items-center justify-between hover:bg-white/20 transition-all duration-150 hover:-translate-y-0.5 hover:shadow-lg animate-slide-up" style={{ animationDelay: `${225 + idx * 50}ms` }}>
-                <div className="flex items-center gap-4">
-                  <div className={`w-10 h-10 flex items-center justify-center font-display text-lg ${player.rank === 1 ? 'bg-white text-orange-primary shadow-lg' : 'bg-white/80 text-orange-primary'}`}>
-                    {player.rank}
+        <div className="animate-rise" style={{ animationDelay: "280ms" }}>
+          <div
+            className="text-xs font-bold tracking-[0.2em] uppercase mb-3"
+            style={{ color: "rgba(255,255,255,0.65)" }}
+          >
+            Final Stats
+          </div>
+
+          <div className="bg-white overflow-hidden">
+            {ranked.map((player, idx) => (
+              <div
+                key={player.id}
+                className="flex items-center gap-4 px-4 py-3.5"
+                style={{
+                  borderTop: idx === 0 ? "none" : "1px solid #F0EDE8",
+                }}
+              >
+                <div
+                  className="w-8 h-8 flex items-center justify-center text-sm font-bold shrink-0"
+                  style={{ background: "#FF6900", color: "#ffffff" }}
+                >
+                  {player.rank}
+                </div>
+
+                <div className="flex-1 min-w-0">
+                  <div
+                    className="font-bold text-sm leading-tight truncate"
+                    style={{ color: "#FF6900" }}
+                  >
+                    {player.name}
                   </div>
-                  <div>
-                    <div className="font-bold text-lg">{player.name}</div>
-                    <div className="text-xs opacity-70 uppercase tracking-wide">
-                      {player.rank === 1 ? '🏆 Winner' : `${player.rank === 2 ? '2nd' : player.rank === 3 ? '3rd' : '4th'} Place`}
-                    </div>
+                  <div
+                    className="text-[10px] font-semibold tracking-wider uppercase mt-0.5"
+                    style={{ color: "#AAAAAA" }}
+                  >
+                    {RANK_SUBLABEL[player.rank] ?? `${player.rank}TH PLACE`}
                   </div>
                 </div>
-                <div className="text-3xl font-display">{player.score}</div>
+
+                <div
+                  className="text-2xl font-bold tabular-nums shrink-0"
+                  style={{ color: "#FF6900" }}
+                >
+                  {player.score}
+                </div>
               </div>
             ))}
           </div>
         </div>
 
-        <div className="flex gap-4 animate-slide-up delay-300">
-          <button onClick={handlePlayAgain} className="flex-1 py-5 bg-white text-orange-primary font-bold text-lg hover:bg-gray-100 active:scale-95 transition-all duration-150 shadow-lg hover:shadow-xl group relative overflow-hidden">
-            <span className="relative z-10">PLAY AGAIN</span>
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent to-gray-100/50 translate-x-[-100%] group-hover:translate-x-0 transition-transform duration-300"></div>
+        <div
+          className="flex gap-3 animate-rise"
+          style={{ animationDelay: "380ms" }}
+        >
+          <button
+            onClick={handlePlayAgain}
+            className="flex-1 py-4 font-bold text-sm tracking-widest uppercase active:scale-95 transition-all hover:brightness-95"
+            style={{ background: "#ffffff", color: "#FF6900" }}
+          >
+            Play Again
           </button>
-          <button onClick={handleShareResults} className="flex-1 py-5 bg-orange-dark text-white font-bold text-lg hover:bg-orange-primary active:scale-95 transition-all duration-150 shadow-lg hover:shadow-xl">
-            SHARE RESULTS
+          <button
+            onClick={handleShareResults}
+            className="flex-1 py-4 font-bold text-sm tracking-widest uppercase active:scale-95 transition-all hover:brightness-95"
+            style={{ background: "#CC5400", color: "#ffffff" }}
+          >
+            Share Results
           </button>
         </div>
       </main>

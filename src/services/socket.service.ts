@@ -14,6 +14,9 @@ class SocketService {
     this.socket = io(SOCKET_URL, {
       transports: ['websocket'],
       autoConnect: true,
+      reconnection: true,
+      reconnectionAttempts: 5,
+      reconnectionDelay: 1500,
     }) as TypedSocket;
 
     this.socket.on('connect', () => {

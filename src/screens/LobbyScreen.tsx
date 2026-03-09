@@ -68,11 +68,11 @@ export function LobbyScreen() {
 
   const handleRemovePlayer = (playerId: string) => {
     if (playerId === currentPlayerId && !isHost) {
-      alert("You cannot remove yourself from the game!");
+      toast.error("You can't remove yourself from the game");
       return;
     }
     if (players.length === 1) {
-      alert("Cannot remove the last player! Leave the game instead.");
+      toast.error("Can't remove the last player");
       return;
     }
     socketService.removePlayer(playerId);
@@ -85,7 +85,7 @@ export function LobbyScreen() {
 
   const handleStartGame = () => {
     if (players.length < 2) {
-      alert("Need at least 2 players to start!");
+      toast.error("Need at least 2 players to start");
       return;
     }
     socketService.startGame();

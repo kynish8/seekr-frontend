@@ -53,6 +53,12 @@ export function HomeScreen() {
       socketService.disconnect();
     });
 
+    socket.once("connect_error", () => {
+      setCreateError("Could not reach server. Is the backend running?");
+      setIsConnecting(false);
+      socketService.disconnect();
+    });
+
     socketService.createRoom(createName.trim());
   };
 
@@ -83,6 +89,12 @@ export function HomeScreen() {
 
     socket.once("error", (data) => {
       setJoinError(data.message);
+      setIsConnecting(false);
+      socketService.disconnect();
+    });
+
+    socket.once("connect_error", () => {
+      setJoinError("Could not reach server. Is the backend running?");
       setIsConnecting(false);
       socketService.disconnect();
     });
@@ -160,6 +172,7 @@ export function HomeScreen() {
                 onKeyDown={(e) => e.key === "Enter" && handleCreateGame()}
                 className="w-full px-4 py-3 bg-white/15 border border-white/25 text-white placeholder-white/50 font-medium text-base focus:outline-none focus:border-white/60 focus:bg-white/20 transition-all duration-150 mb-3"
                 autoComplete="off"
+                maxLength={20}
                 disabled={isConnecting}
               />
               {createError && (
@@ -202,6 +215,7 @@ export function HomeScreen() {
                 onKeyDown={(e) => e.key === "Enter" && handleJoinGame()}
                 className="w-full px-4 py-3 bg-white/15 border border-white/25 text-white placeholder-white/50 font-medium text-base focus:outline-none focus:border-white/60 focus:bg-white/20 transition-all duration-150 mb-3"
                 autoComplete="off"
+                maxLength={20}
                 disabled={isConnecting}
               />
               <input
@@ -209,7 +223,7 @@ export function HomeScreen() {
                 placeholder="Room code (e.g. ABC123)"
                 value={roomCode}
                 onChange={(e) => {
-                  setRoomCode(e.target.value.toUpperCase());
+                  setRoomCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ""));
                   setJoinError("");
                 }}
                 onKeyDown={(e) => e.key === "Enter" && handleJoinGame()}
