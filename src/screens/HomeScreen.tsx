@@ -1,15 +1,46 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { Logo } from "../components/ui/Logo";
+import { AsciiOrangeBackground } from "../components/ui/AsciiOrange";
 import { useGameStore } from "../store/gameStore";
 import { socketService } from "../services/socket.service";
 
+function useParallax() {
+  const [offset, setOffset] = useState({ x: 0, y: 0 });
+  const raf = useRef(0);
+  const target = useRef({ x: 0, y: 0 });
+  const current = useRef({ x: 0, y: 0 });
+
+  useEffect(() => {
+    const onMove = (e: MouseEvent) => {
+      target.current = {
+        x: (e.clientX / window.innerWidth - 0.5) * 2,
+        y: (e.clientY / window.innerHeight - 0.5) * 2,
+      };
+    };
+    window.addEventListener("mousemove", onMove);
+
+    const animate = () => {
+      current.current.x += (target.current.x - current.current.x) * 0.06;
+      current.current.y += (target.current.y - current.current.y) * 0.06;
+      setOffset({ x: current.current.x, y: current.current.y });
+      raf.current = requestAnimationFrame(animate);
+    };
+    raf.current = requestAnimationFrame(animate);
+
+    return () => {
+      window.removeEventListener("mousemove", onMove);
+      cancelAnimationFrame(raf.current);
+    };
+  }, []);
+
+  return offset;
+}
+
 export function HomeScreen() {
+  const [mode, setMode] = useState<"create" | "join">("create");
   const [createName, setCreateName] = useState("");
-  const [joinName, setJoinName] = useState("");
   const [roomCode, setRoomCode] = useState("");
-  const [createError, setCreateError] = useState("");
-  const [joinError, setJoinError] = useState("");
+  const [error, setError] = useState("");
   const [isConnecting, setIsConnecting] = useState(false);
   const navigate = useNavigate();
   const {
@@ -20,230 +51,152 @@ export function HomeScreen() {
     setCurrentPlayerId,
     setHostId,
   } = useGameStore();
+  const p = useParallax();
 
-  const handleCreateGame = () => {
+  const handleSubmit = () => {
     if (!createName.trim()) {
-      setCreateError("Enter your name to continue");
+      setError("enter your name to continue");
       return;
     }
-    setCreateError("");
+    if (mode === "join" && !roomCode.trim()) {
+      setError("enter a room code to continue");
+      return;
+    }
+    setError("");
     setIsConnecting(true);
 
     const socket = socketService.connect();
 
-    // room:created fires first with the room code
-    socket.once("room:created", (data) => {
-      setStoreRoomCode(data.roomCode);
-    });
+    if (mode === "create") {
+      socket.once("room:created", (data) => {
+        setStoreRoomCode(data.roomCode);
+      });
 
-    // room:joined fires next with full state
-    socket.once("room:joined", (data) => {
-      setPlayers(data.players);
-      updateSettings(data.settings);
-      setCurrentPlayerId(data.playerId);
-      setHostId(data.hostId);
-      setIsHost(true);
-      setIsConnecting(false);
-      navigate("/lobby");
-    });
+      socket.once("room:joined", (data) => {
+        setPlayers(data.players);
+        updateSettings(data.settings);
+        setCurrentPlayerId(data.playerId);
+        setHostId(data.hostId);
+        setIsHost(true);
+        setIsConnecting(false);
+        navigate("/lobby");
+      });
+
+      socketService.createRoom(createName.trim());
+    } else {
+      socket.once("room:joined", (data) => {
+        setStoreRoomCode(roomCode.trim().toUpperCase());
+        setPlayers(data.players);
+        updateSettings(data.settings);
+        setCurrentPlayerId(data.playerId);
+        setHostId(data.hostId);
+        setIsHost(false);
+        setIsConnecting(false);
+        navigate("/lobby");
+      });
+
+      socketService.joinRoom(roomCode.trim(), createName.trim());
+    }
 
     socket.once("error", (data) => {
-      setCreateError(data.message);
+      setError(data.message);
       setIsConnecting(false);
       socketService.disconnect();
     });
 
     socket.once("connect_error", () => {
-      setCreateError("Could not reach server. Is the backend running?");
+      setError("could not reach server. is the backend running?");
       setIsConnecting(false);
       socketService.disconnect();
     });
-
-    socketService.createRoom(createName.trim());
-  };
-
-  const handleJoinGame = () => {
-    if (!joinName.trim()) {
-      setJoinError("Enter your name to continue");
-      return;
-    }
-    if (!roomCode.trim()) {
-      setJoinError("Enter a room code to continue");
-      return;
-    }
-    setJoinError("");
-    setIsConnecting(true);
-
-    const socket = socketService.connect();
-
-    socket.once("room:joined", (data) => {
-      setStoreRoomCode(roomCode.trim().toUpperCase());
-      setPlayers(data.players);
-      updateSettings(data.settings);
-      setCurrentPlayerId(data.playerId);
-      setHostId(data.hostId);
-      setIsHost(false);
-      setIsConnecting(false);
-      navigate("/lobby");
-    });
-
-    socket.once("error", (data) => {
-      setJoinError(data.message);
-      setIsConnecting(false);
-      socketService.disconnect();
-    });
-
-    socket.once("connect_error", () => {
-      setJoinError("Could not reach server. Is the backend running?");
-      setIsConnecting(false);
-      socketService.disconnect();
-    });
-
-    socketService.joinRoom(roomCode.trim(), joinName.trim());
   };
 
   return (
-    <div className="min-h-screen gradient-orange text-white flex flex-col relative noise-overlay overflow-hidden">
-      <header className="px-8 md:px-16 py-6 relative z-10 animate-fade-in">
-        <Logo size="md" />
-      </header>
+    <div className="min-h-screen bg-white text-[#1a1a2e] flex flex-col relative overflow-hidden">
+      <AsciiOrangeBackground />
+      <main className="flex-1 flex flex-col items-center justify-center px-6 relative z-10">
+        <div
+          className="text-center mb-12 transition-transform duration-100 bg-white px-6 py-4"
+          style={{ transform: `translate(${p.x * -15}px, ${p.y * -10}px)` }}
+        >
+          <h1 className="text-7xl md:text-8xl xl:text-9xl font-bold leading-[0.9] tracking-tight mb-4 text-[#2563eb]">
+            seekr
+          </h1>
+          <p className="text-base text-[#1a1a2e]/60 tracking-widest">
+            find it. snap it. win it.
+          </p>
+        </div>
 
-      <main className="flex-1 flex items-center px-8 md:px-16 relative z-10">
-        <div className="w-full max-w-7xl grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20 py-8">
-          <div className="flex flex-col justify-center animate-slide-up">
-            <h1 className="text-6xl md:text-7xl xl:text-8xl font-bold mb-6 leading-[0.92] tracking-tight">
-              FIND IT.
-              <br />
-              SNAP IT.
-              <br />
-              WIN IT.
-            </h1>
-            <p className="text-lg opacity-80 font-medium leading-relaxed max-w-sm mb-10">
-              Multiplayer scavenger hunt. Real-time competition. Turn your world
-              into a game.
-            </p>
-
-            <div className="space-y-6 animate-slide-up delay-150">
-              {[
-                {
-                  num: "01",
-                  title: "GATHER PLAYERS",
-                  desc: "Create a room and share the code with friends.",
-                },
-                {
-                  num: "02",
-                  title: "FIND & SNAP",
-                  desc: "Race to find objects. First to submit wins the round.",
-                },
-                {
-                  num: "03",
-                  title: "WIN & CELEBRATE",
-                  desc: "Earn points each round. Most points takes the crown.",
-                },
-              ].map((step) => (
-                <div key={step.num} className="flex items-start gap-4">
-                  <span className="text-2xl font-bold opacity-30 w-10 shrink-0">
-                    {step.num}
-                  </span>
-                  <div>
-                    <div className="font-bold text-sm tracking-wider mb-0.5">
-                      {step.title}
-                    </div>
-                    <div className="text-sm opacity-70">{step.desc}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
+        <div
+          className="w-full max-w-md space-y-5 transition-transform duration-100 bg-white p-8"
+          style={{ transform: `translate(${p.x * -5}px, ${p.y * -4}px)` }}
+        >
+          <div className="flex bg-[#1a1a2e]/5 p-1 gap-1">
+            <button
+              onClick={() => { setMode("create"); setError(""); }}
+              className={`flex-1 py-3 text-base font-bold tracking-wide transition-all duration-150 ${
+                mode === "create"
+                  ? "bg-[#2563eb] text-white"
+                  : "text-[#1a1a2e]/50 hover:text-[#1a1a2e]/70"
+              }`}
+            >
+              create game
+            </button>
+            <button
+              onClick={() => { setMode("join"); setError(""); }}
+              className={`flex-1 py-3 text-base font-bold tracking-wide transition-all duration-150 ${
+                mode === "join"
+                  ? "bg-[#2563eb] text-white"
+                  : "text-[#1a1a2e]/50 hover:text-[#1a1a2e]/70"
+              }`}
+            >
+              join game
+            </button>
           </div>
 
-          <div className="flex flex-col gap-4 justify-center animate-slide-up delay-150">
-            <div className="bg-white/10 backdrop-blur-sm border border-white/20 p-7">
-              <div className="text-xs font-bold tracking-widest uppercase opacity-60 mb-4">
-                Create Game
-              </div>
-              <input
-                type="text"
-                placeholder="Your name"
-                value={createName}
-                onChange={(e) => {
-                  setCreateName(e.target.value);
-                  setCreateError("");
-                }}
-                onKeyDown={(e) => e.key === "Enter" && handleCreateGame()}
-                className="w-full px-4 py-3 bg-white/15 border border-white/25 text-white placeholder-white/50 font-medium text-base focus:outline-none focus:border-white/60 focus:bg-white/20 transition-all duration-150 mb-3"
-                autoComplete="off"
-                maxLength={20}
-                disabled={isConnecting}
-              />
-              {createError && (
-                <p className="text-white/80 text-xs mb-3 -mt-1">
-                  {createError}
-                </p>
-              )}
-              <button
-                onClick={handleCreateGame}
-                disabled={isConnecting}
-                className="w-full py-4 bg-white text-orange-primary font-bold text-base tracking-wide hover:bg-gray-50 active:scale-[0.98] transition-all duration-150 shadow-lg hover:shadow-xl disabled:opacity-60 disabled:cursor-not-allowed"
-              >
-                {isConnecting ? "CONNECTING..." : "CREATE GAME"}
-              </button>
-            </div>
+          <input
+            type="text"
+            placeholder="your name"
+            value={createName}
+            onChange={(e) => {
+              setCreateName(e.target.value);
+              setError("");
+            }}
+            onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
+            className="w-full px-4 py-4 bg-transparent border-b-2 border-[#1a1a2e]/20 text-[#1a1a2e] placeholder-[#1a1a2e]/40 font-medium text-base focus:outline-none focus:border-[#2563eb] transition-all duration-150"
+            autoComplete="off"
+            maxLength={20}
+            disabled={isConnecting}
+          />
 
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-white/20" />
-              </div>
-              <div className="relative flex justify-center">
-                <span className="px-3 bg-transparent text-white/40 text-xs font-medium tracking-wider">
-                  OR
-                </span>
-              </div>
-            </div>
+          {mode === "join" && (
+            <input
+              type="text"
+              placeholder="room code"
+              value={roomCode}
+              onChange={(e) => {
+                setRoomCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ""));
+                setError("");
+              }}
+              onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
+              className="w-full px-4 py-4 bg-transparent border-b-2 border-[#1a1a2e]/20 text-[#1a1a2e] placeholder-[#1a1a2e]/40 font-medium text-base focus:outline-none focus:border-[#2563eb] transition-all duration-150"
+              maxLength={6}
+              autoComplete="off"
+              disabled={isConnecting}
+            />
+          )}
 
-            <div className="bg-white/10 backdrop-blur-sm border border-white/20 p-7">
-              <div className="text-xs font-bold tracking-widest uppercase opacity-60 mb-4">
-                Join Game
-              </div>
-              <input
-                type="text"
-                placeholder="Your name"
-                value={joinName}
-                onChange={(e) => {
-                  setJoinName(e.target.value);
-                  setJoinError("");
-                }}
-                onKeyDown={(e) => e.key === "Enter" && handleJoinGame()}
-                className="w-full px-4 py-3 bg-white/15 border border-white/25 text-white placeholder-white/50 font-medium text-base focus:outline-none focus:border-white/60 focus:bg-white/20 transition-all duration-150 mb-3"
-                autoComplete="off"
-                maxLength={20}
-                disabled={isConnecting}
-              />
-              <input
-                type="text"
-                placeholder="Room code (e.g. ABC123)"
-                value={roomCode}
-                onChange={(e) => {
-                  setRoomCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ""));
-                  setJoinError("");
-                }}
-                onKeyDown={(e) => e.key === "Enter" && handleJoinGame()}
-                className="w-full px-4 py-3 bg-white/15 border border-white/25 text-white placeholder-white/50 font-medium text-base focus:outline-none focus:border-white/60 focus:bg-white/20 transition-all duration-150 mb-3"
-                maxLength={6}
-                autoComplete="off"
-                disabled={isConnecting}
-              />
-              {joinError && (
-                <p className="text-white/80 text-xs mb-3 -mt-1">{joinError}</p>
-              )}
-              <button
-                onClick={handleJoinGame}
-                disabled={isConnecting}
-                className="w-full py-4 bg-orange-dark text-white font-bold text-base tracking-wide hover:bg-orange-primary active:scale-[0.98] transition-all duration-150 shadow-lg hover:shadow-xl disabled:opacity-60 disabled:cursor-not-allowed"
-              >
-                {isConnecting ? "CONNECTING..." : "JOIN GAME"}
-              </button>
-            </div>
-          </div>
+          {error && (
+            <p className="text-red-500/70 text-sm">{error}</p>
+          )}
+
+          <button
+            onClick={handleSubmit}
+            disabled={isConnecting}
+            className="w-full py-4 bg-[#2563eb] text-white font-bold text-base tracking-wide hover:bg-[#1d4ed8] active:scale-[0.98] transition-all duration-150 disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            {isConnecting ? "connecting..." : mode === "create" ? "create game" : "join game"}
+          </button>
         </div>
       </main>
     </div>

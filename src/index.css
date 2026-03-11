@@ -47,6 +47,10 @@
     background: linear-gradient(135deg, #ff6900 0%, #ff8533 100%);
   }
 
+  .gradient-dark {
+    background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%);
+  }
+
   .noise-overlay::before {
     content: "";
     position: absolute;

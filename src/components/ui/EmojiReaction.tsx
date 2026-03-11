@@ -41,7 +41,7 @@ export function EmojiReactionButton({ emoji, onReact }: EmojiReactionProps) {
     <div className="relative">
       <button
         onClick={handleClick}
-        className="w-10 h-10 bg-orange-primary hover:bg-orange-dark transition-all hover:scale-110 active:scale-95 flex items-center justify-center text-xl"
+        className="w-10 h-10 bg-white/20 border border-white/30 hover:bg-white/30 transition-all hover:scale-110 active:scale-95 flex items-center justify-center text-xl"
       >
         {emoji}
       </button>
