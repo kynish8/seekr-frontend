@@ -263,7 +263,7 @@ export function GameScreen() {
       <canvas ref={canvasRef} className="hidden" />
 
       {winnerOverlay && (
-        <div className="absolute inset-0 z-50 flex items-center justify-center bg-white animate-fade-in">
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-white/70 backdrop-blur-sm animate-fade-in">
           <div className="text-center px-8 animate-overlay">
             <div className="w-10 h-1 bg-[#FF6900] mx-auto mb-4" />
             <div className="text-4xl font-display font-bold text-gray-900 mb-1">
@@ -271,10 +271,10 @@ export function GameScreen() {
                 ? "you found it!"
                 : `${winnerOverlay.name} wins!`}
             </div>
-            <div className="text-base text-gray-500 mb-4">
+            <div className="text-base text-gray-600 mb-4">
               {winnerOverlay.objectName}
             </div>
-            <div className="text-gray-400 animate-pulse text-xs tracking-[0.15em]">
+            <div className="text-gray-500 animate-pulse text-xs tracking-[0.15em]">
               next round starting...
             </div>
           </div>
@@ -282,16 +282,16 @@ export function GameScreen() {
       )}
 
       {timeoutOverlay && (
-        <div className="absolute inset-0 z-50 flex items-center justify-center bg-white animate-fade-in">
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-white/70 backdrop-blur-sm animate-fade-in">
           <div className="text-center px-8 animate-overlay">
-            <div className="w-10 h-1 bg-gray-300 mx-auto mb-4" />
+            <div className="w-10 h-1 bg-gray-400 mx-auto mb-4" />
             <div className="text-4xl font-display font-bold text-gray-900 mb-1">
               time's up
             </div>
-            <div className="text-base text-gray-500 mb-4">
+            <div className="text-base text-gray-600 mb-4">
               nobody found the {timeoutOverlay}
             </div>
-            <div className="text-gray-400 animate-pulse text-xs tracking-[0.15em]">
+            <div className="text-gray-500 animate-pulse text-xs tracking-[0.15em]">
               next round starting...
             </div>
           </div>
