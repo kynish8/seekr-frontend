@@ -5,8 +5,8 @@
     </clipPath>
   </defs>
   <g clip-path="url(#circle)">
-    <rect x="0"      y="0" width="10.67" height="32" fill="#FF6900"/>
-    <rect x="10.67"  y="0" width="10.67" height="32" fill="#2563eb"/>
+    <rect x="0"      y="0" width="10.67" height="32" fill="#2563eb"/>
+    <rect x="10.67"  y="0" width="10.67" height="32" fill="#FF6900"/>
     <rect x="21.33"  y="0" width="10.67" height="32" fill="#10b981"/>
   </g>
 </svg>
