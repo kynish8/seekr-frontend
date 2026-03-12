@@ -214,7 +214,6 @@ export function ResultsScreen() {
           </div>
         </div>
 
-        {/* Play again — centered, content width */}
         <div
           className="flex justify-center mb-2"
           style={{ transform: `translate(${p.x * -2}px, ${p.y * -1.5}px)` }}
@@ -227,7 +226,6 @@ export function ResultsScreen() {
           </button>
         </div>
 
-        {/* Share buttons — centered, content width */}
         <div
           className="flex justify-center gap-2"
           style={{ transform: `translate(${p.x * -1}px, ${p.y * -0.5}px)` }}

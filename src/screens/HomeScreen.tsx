@@ -100,7 +100,7 @@ export function HomeScreen() {
               aria-hidden="true"
               style={{ clipPath: "inset(0 100% 0 0)" }}
             >
-              hullabaloo
+              hullabaloo.
             </h1>
           </div>
           <p className="text-base text-[#2563eb] tracking-widest mt-4">
