@@ -36,9 +36,9 @@ const PODIUM_COLS = [
 ];
 
 const RANK_SUBLABEL: Record<number, string> = {
-  1: "WINNER",
-  2: "2ND PLACE",
-  3: "3RD PLACE",
+  1: "winner",
+  2: "2nd place",
+  3: "3rd place",
 };
 
 export function ResultsScreen() {
@@ -63,7 +63,7 @@ export function ResultsScreen() {
   };
 
   const handleShareResults = () => {
-    const text = `hullabaloo Results!\n${ranked.map((p) => `${p.rank}. ${p.name} — ${p.score} PTS`).join("\n")}`;
+    const text = `hullabaloo results!\n${ranked.map((p) => `${p.rank}. ${p.name} — ${p.score} pts`).join("\n")}`;
     navigator.clipboard.writeText(text);
     toast.success("Results copied!");
   };
@@ -80,7 +80,7 @@ export function ResultsScreen() {
             className="font-display font-bold text-white leading-none tracking-tight text-center whitespace-nowrap"
             style={{ fontSize: "clamp(2rem, 7vw, 3.5rem)" }}
           >
-            GAME OVER
+            game over
           </h1>
         </div>
 
@@ -119,7 +119,7 @@ export function ResultsScreen() {
                           className="text-xs font-semibold mt-0.5 tabular-nums"
                           style={{ color: "#555555" }}
                         >
-                          {player.score} PTS
+                          {player.score} pts
                         </span>
                       </>
                     ) : (
@@ -156,10 +156,10 @@ export function ResultsScreen() {
 
         <div className="animate-rise" style={{ animationDelay: "280ms" }}>
           <div
-            className="text-xs font-bold tracking-[0.2em] uppercase mb-3"
+            className="text-xs font-bold tracking-[0.2em] mb-3"
             style={{ color: "rgba(255,255,255,0.65)" }}
           >
-            Final Stats
+            final stats
           </div>
 
           <div className="bg-white overflow-hidden">
@@ -186,10 +186,10 @@ export function ResultsScreen() {
                     {player.name}
                   </div>
                   <div
-                    className="text-[10px] font-semibold tracking-wider uppercase mt-0.5"
+                    className="text-[10px] font-semibold tracking-wider mt-0.5"
                     style={{ color: "#AAAAAA" }}
                   >
-                    {RANK_SUBLABEL[player.rank] ?? `${player.rank}TH PLACE`}
+                    {RANK_SUBLABEL[player.rank] ?? `${player.rank}th place`}
                   </div>
                 </div>
 
@@ -210,17 +210,17 @@ export function ResultsScreen() {
         >
           <button
             onClick={handlePlayAgain}
-            className="flex-1 py-4 font-bold text-sm tracking-widest uppercase active:scale-95 transition-all hover:brightness-95"
+            className="flex-1 py-4 font-bold text-sm tracking-widest active:scale-95 transition-all hover:brightness-95"
             style={{ background: "#ffffff", color: "#FF6900" }}
           >
-            Play Again
+            play again
           </button>
           <button
             onClick={handleShareResults}
-            className="flex-1 py-4 font-bold text-sm tracking-widest uppercase active:scale-95 transition-all hover:brightness-95"
+            className="flex-1 py-4 font-bold text-sm tracking-widest active:scale-95 transition-all hover:brightness-95"
             style={{ background: "#CC5400", color: "#ffffff" }}
           >
-            Share Results
+            share results
           </button>
         </div>
       </main>

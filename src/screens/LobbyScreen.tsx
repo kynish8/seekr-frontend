@@ -1,11 +1,21 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
-import { Logo } from "../components/ui/Logo";
 import { useGameStore } from "../store/gameStore";
 import { POINTS_OPTIONS, TIMEOUT_OPTIONS } from "../constants/game.constants";
 import { socketService } from "../services/socket.service";
 import { GameSettings } from "../types/game.types";
+import { AsciiBotanical } from "../components/ui/AsciiBotanical";
+import { useParallax } from "../hooks/useParallax";
+
+const PLAYER_COLORS = [
+  "#FF6900",
+  "#2563eb",
+  "#10b981",
+  "#8b5cf6",
+  "#f59e0b",
+  "#ec4899",
+];
 
 export function LobbyScreen() {
   const navigate = useNavigate();
@@ -19,20 +29,17 @@ export function LobbyScreen() {
     addPlayer,
     removePlayer,
   } = useGameStore();
+  const p = useParallax();
 
   useEffect(() => {
-    if (!roomCode) {
-      navigate("/");
-    }
+    if (!roomCode) navigate("/");
   }, [roomCode, navigate]);
 
   useEffect(() => {
     const socket = socketService.getSocket();
     if (!socket) return;
 
-    socket.on("player:joined", (player) => {
-      addPlayer(player);
-    });
+    socket.on("player:joined", (player) => addPlayer(player));
 
     socket.on("player:left", (playerId) => {
       if (playerId === currentPlayerId) {
@@ -43,13 +50,8 @@ export function LobbyScreen() {
       }
     });
 
-    socket.on("settings:updated", (newSettings) => {
-      updateSettings(newSettings);
-    });
-
-    socket.on("game:started", () => {
-      navigate("/game");
-    });
+    socket.on("settings:updated", (newSettings) => updateSettings(newSettings));
+    socket.on("game:started", () => navigate("/game"));
 
     return () => {
       socket.off("player:joined");
@@ -62,19 +64,12 @@ export function LobbyScreen() {
   const handleCopyRoomCode = () => {
     if (roomCode) {
       navigator.clipboard.writeText(roomCode);
-      toast("COPIED!");
+      toast("copied!");
     }
   };
 
   const handleRemovePlayer = (playerId: string) => {
-    if (playerId === currentPlayerId && !isHost) {
-      toast.error("You can't remove yourself from the game");
-      return;
-    }
-    if (players.length === 1) {
-      toast.error("Can't remove the last player");
-      return;
-    }
+    if (players.length === 1) return;
     socketService.removePlayer(playerId);
   };
 
@@ -85,108 +80,96 @@ export function LobbyScreen() {
 
   const handleStartGame = () => {
     if (players.length < 2) {
-      toast.error("Need at least 2 players to start");
+      toast.error("need at least 2 players to start");
       return;
     }
     socketService.startGame();
   };
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      <header className="gradient-orange py-5 px-8 md:px-12 shadow-md animate-slide-up">
-        <Logo size="md" />
-      </header>
+    <div className="min-h-screen bg-white flex flex-col overflow-x-hidden relative">
+      <AsciiBotanical />
 
-      <main className="max-w-3xl mx-auto px-6 md:px-8 py-10">
-        <div className="mb-10 animate-scale-in">
-          <div className="text-xs font-bold text-gray-500 mb-2 tracking-wider uppercase">
-            Room Code
+      <main className="flex-1 flex flex-col items-center px-6 pt-14 pb-12 relative z-10">
+        <div
+          className="text-center mb-14"
+          style={{ transform: `translate(${p.x * -12}px, ${p.y * -8}px)` }}
+        >
+          <div className="text-sm font-bold text-[#1a1a1a]/60 tracking-widest mb-3">
+            room code
           </div>
-          <div className="flex items-center gap-3 group">
-            <div
-              className="text-7xl font-display text-gray-900 tracking-tight select-all
-                           transition-colors hover:text-orange-primary cursor-pointer"
-            >
-              {roomCode}
-            </div>
-            <button
-              onClick={handleCopyRoomCode}
-              className="px-6 py-2.5 bg-white text-orange-primary font-bold text-sm
-                         hover:bg-orange-primary hover:text-white active:scale-95
-                         transition-all duration-150 shadow-md hover:shadow-lg"
-            >
-              COPY
-            </button>
+          <button
+            onClick={handleCopyRoomCode}
+            className="text-7xl md:text-8xl font-bold leading-none tracking-tight text-[#FF6900] hover:opacity-70 active:scale-95 transition-all duration-150 select-none"
+            data-no-trail
+          >
+            {roomCode}
+          </button>
+          <div className="text-xs text-[#1a1a1a]/45 mt-2 tracking-wide">
+            tap to copy
           </div>
         </div>
 
-        <div className="mb-10 animate-slide-up delay-150">
-          <div className="text-xs font-bold text-gray-500 mb-4 tracking-wider uppercase">
-            Players ({players.length})
+        <div
+          className="w-full max-w-sm mb-10"
+          style={{ transform: `translate(${p.x * -7}px, ${p.y * -5}px)` }}
+        >
+          <div className="text-xs font-bold text-[#1a1a1a]/50 tracking-widest mb-4 text-center">
+            players ({players.length})
           </div>
-          <div className="grid grid-cols-2 gap-4">
-            {players.map((player, idx) => (
+          <div className="grid grid-cols-2 gap-2">
+            {players.map((player, i) => (
               <div
                 key={player.id}
-                className="card p-5 relative group hover:-translate-y-1 transition-all duration-150
-                           animate-scale-in"
-                style={{ animationDelay: `${150 + idx * 50}ms` }}
+                className="relative px-4 py-4 font-bold text-base group text-white"
+                style={{
+                  backgroundColor: PLAYER_COLORS[i % PLAYER_COLORS.length],
+                }}
               >
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="font-bold text-gray-900 text-lg">
-                      {player.name}
-                      {player.id === currentPlayerId && (
-                        <span className="text-xs text-orange-primary ml-2 font-normal">
-                          (YOU)
-                        </span>
-                      )}
-                    </div>
-                    <div className="text-xs text-gray-500 flex items-center gap-2">
-                      <span className="inline-block w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse-slow"></span>
-                      WAITING
-                    </div>
-                  </div>
-                  <div className="w-4 h-4 bg-orange-primary transition-transform group-hover:rotate-45"></div>
+                <div className="truncate">
+                  {player.name}
+                  {player.id === currentPlayerId && (
+                    <span className="font-normal opacity-70"> (you)</span>
+                  )}
                 </div>
-                {isHost && players.length > 1 && (
-                  <button
-                    onClick={() => handleRemovePlayer(player.id)}
-                    className="absolute -top-2 -right-2 w-7 h-7 bg-gray-800 text-white
-                               flex items-center justify-center text-sm font-bold
-                               opacity-0 group-hover:opacity-100 transition-all
-                               hover:bg-red-600 hover:scale-110 active:scale-95 shadow-lg"
-                    title={
-                      player.id === currentPlayerId
-                        ? "Leave game"
-                        : "Remove player"
-                    }
-                  >
-                    ×
-                  </button>
-                )}
+                {isHost &&
+                  players.length > 1 &&
+                  player.id !== currentPlayerId && (
+                    <button
+                      onClick={() => handleRemovePlayer(player.id)}
+                      className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-[#1a1a1a] text-white
+                               text-xs font-bold flex items-center justify-center
+                               opacity-0 group-hover:opacity-100 transition-opacity active:scale-90"
+                      title="remove player"
+                    >
+                      ×
+                    </button>
+                  )}
               </div>
             ))}
           </div>
 
           {players.length < 2 && (
-            <p className="text-sm text-gray-500 mt-4 text-center">
-              Share the room code — need at least 2 players to start.
+            <p className="text-xs text-[#1a1a1a]/35 mt-4 text-center">
+              share the code — need at least 2 players to start
             </p>
           )}
         </div>
 
+        {/* Settings — host only */}
         {isHost && (
-          <div className="mb-10 animate-slide-up delay-225">
-            <div className="text-xs font-bold text-gray-500 mb-4 tracking-wider uppercase">
-              Game Settings
+          <div
+            className="w-full max-w-sm mb-10"
+            style={{ transform: `translate(${p.x * -4}px, ${p.y * -3}px)` }}
+          >
+            <div className="text-xs font-bold text-[#1a1a1a]/50 tracking-widest mb-4 text-center">
+              settings
             </div>
-
-            <div className="space-y-6">
+            <div className="space-y-4">
               <div>
-                <label className="block text-xs font-bold text-gray-700 mb-3 uppercase tracking-wide">
-                  Points to Win
-                </label>
+                <div className="text-xs font-bold text-[#1a1a1a]/45 mb-2">
+                  points to win
+                </div>
                 <div className="flex gap-2">
                   {POINTS_OPTIONS.map((option) => (
                     <button
@@ -194,12 +177,11 @@ export function LobbyScreen() {
                       onClick={() =>
                         handleSettingsChange({ pointsToWin: option })
                       }
-                      className={`flex-1 py-3 font-bold text-lg transition-all duration-150
-                                  hover:scale-105 active:scale-95 ${
-                                    settings.pointsToWin === option
-                                      ? "bg-orange-primary text-white shadow-md"
-                                      : "bg-white text-gray-700 hover:bg-gray-50 shadow-sm"
-                                  }`}
+                      className={`flex-1 py-3 font-bold text-base transition-all duration-150 active:scale-95 ${
+                        settings.pointsToWin === option
+                          ? "bg-[#FF6900] text-white"
+                          : "bg-[#1a1a1a]/6 text-[#1a1a1a] hover:bg-[#1a1a1a]/10"
+                      }`}
                     >
                       {option}
                     </button>
@@ -208,9 +190,9 @@ export function LobbyScreen() {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-gray-700 mb-3 uppercase tracking-wide">
-                  Round Timeout
-                </label>
+                <div className="text-xs font-bold text-[#1a1a1a]/45 mb-2">
+                  round timeout
+                </div>
                 <div className="flex gap-2">
                   {TIMEOUT_OPTIONS.map((option) => (
                     <button
@@ -218,12 +200,11 @@ export function LobbyScreen() {
                       onClick={() =>
                         handleSettingsChange({ roundTimeout: option })
                       }
-                      className={`flex-1 py-3 font-bold text-lg transition-all duration-150
-                                  hover:scale-105 active:scale-95 ${
-                                    settings.roundTimeout === option
-                                      ? "bg-orange-primary text-white shadow-md"
-                                      : "bg-white text-gray-700 hover:bg-gray-50 shadow-sm"
-                                  }`}
+                      className={`flex-1 py-3 font-bold text-base transition-all duration-150 active:scale-95 ${
+                        settings.roundTimeout === option
+                          ? "bg-[#FF6900] text-white"
+                          : "bg-[#1a1a1a]/6 text-[#1a1a1a] hover:bg-[#1a1a1a]/10"
+                      }`}
                     >
                       {option}s
                     </button>
@@ -234,30 +215,28 @@ export function LobbyScreen() {
           </div>
         )}
 
-        {isHost ? (
-          <button
-            onClick={handleStartGame}
-            disabled={players.length < 2}
-            className="w-full py-5 bg-white text-orange-primary font-display text-xl
-                       hover:bg-orange-primary hover:text-white active:scale-98
-                       transition-all duration-150 shadow-md hover:shadow-lg
-                       animate-slide-up delay-300 group relative overflow-hidden
-                       disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <span className="relative z-10">START GAME</span>
-            <div
-              className="absolute inset-0 bg-gradient-to-r from-orange-light to-orange-primary
-                            translate-y-[100%] group-hover:translate-y-0 transition-transform duration-300"
-            ></div>
-          </button>
-        ) : (
-          <div className="text-center text-gray-600 py-8 text-sm font-medium animate-pulse-slow">
-            <div className="inline-flex items-center gap-2">
-              <div className="w-2 h-2 bg-orange-primary rounded-full animate-pulse"></div>
-              Waiting for host to start the game...
+        {/* Start / wait */}
+        <div
+          className="w-full max-w-sm"
+          style={{ transform: `translate(${p.x * -2}px, ${p.y * -1.5}px)` }}
+        >
+          {isHost ? (
+            <button
+              onClick={handleStartGame}
+              disabled={players.length < 2}
+              className="w-full py-4 bg-[#FF6900] text-white font-bold text-base tracking-wide
+                         hover:bg-[#e05e00] active:scale-[0.98] transition-all duration-150
+                         disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              start game
+            </button>
+          ) : (
+            <div className="flex items-center justify-center gap-2 py-4 text-sm text-[#1a1a1a]/40">
+              <div className="w-1.5 h-1.5 bg-[#FF6900] rounded-full animate-pulse" />
+              waiting for host to start...
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </main>
     </div>
   );

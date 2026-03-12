@@ -1,9 +1,10 @@
-import { useRef, useEffect, useCallback } from 'react';
+import { useRef, useEffect, useCallback } from "react";
 
-const ASCII_CHARS = ' .·:;+=*#%@';
+const ASCII_CHARS = " .·:;+=*#%@";
 const CELL_SIZE = 16;
 const RIPPLE_SPEED = 120; // px per second
 const RIPPLE_RING_WIDTH = 30;
+const CLIP_THRESHOLD = 0.38;
 
 interface Ripple {
   x: number;
@@ -12,7 +13,11 @@ interface Ripple {
   amplitude: number;
 }
 
-export function AsciiOrangeBackground() {
+interface Props {
+  blueOverlayRef?: React.RefObject<HTMLElement | null>;
+}
+
+export function AsciiOrangeBackground({ blueOverlayRef }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const ripples = useRef<Ripple[]>([]);
   const rafRef = useRef(0);
@@ -24,7 +29,7 @@ export function AsciiOrangeBackground() {
 
   const handleMouseMove = useCallback((e: MouseEvent) => {
     const target = e.target as HTMLElement;
-    if (target.closest('input, button, a, [data-no-trail]')) return;
+    if (target.closest("input, button, a, [data-no-trail]")) return;
 
     const dx = e.clientX - lastSpawn.current.x;
     const dy = e.clientY - lastSpawn.current.y;
@@ -42,11 +47,11 @@ export function AsciiOrangeBackground() {
   }, []);
 
   useEffect(() => {
-    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener("mousemove", handleMouseMove);
 
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const ctx = canvas.getContext('2d')!;
+    const ctx = canvas.getContext("2d")!;
 
     const resize = () => {
       const dpr = window.devicePixelRatio || 1;
@@ -60,7 +65,7 @@ export function AsciiOrangeBackground() {
       grid.current = new Float32Array(gridW.current * gridH.current);
     };
     resize();
-    window.addEventListener('resize', resize);
+    window.addEventListener("resize", resize);
 
     const animate = (now: number) => {
       const dt = (now - lastTime.current) / 1000;
@@ -70,17 +75,14 @@ export function AsciiOrangeBackground() {
       const h = gridH.current;
       const g = grid.current;
 
-      // Clear grid
       g.fill(0);
 
-      // Update ripples and accumulate onto grid
       ripples.current = ripples.current.filter((r) => r.amplitude > 0.01);
 
       for (const r of ripples.current) {
         r.radius += RIPPLE_SPEED * dt;
         r.amplitude *= 1 - dt * 1.2;
 
-        // Only process grid cells near the ring
         const minR = Math.max(0, r.radius - RIPPLE_RING_WIDTH * 2);
         const maxR = r.radius + RIPPLE_RING_WIDTH * 2;
 
@@ -99,11 +101,10 @@ export function AsciiOrangeBackground() {
 
             if (dist < minR || dist > maxR) continue;
 
-            // Wave function: sine wave centered on the ring radius
             const phase = ((dist - r.radius) / RIPPLE_RING_WIDTH) * Math.PI;
             const wave = Math.cos(phase) * 0.5 + 0.5;
-            // Smooth falloff at edges
-            const falloff = 1 - Math.abs(dist - r.radius) / (RIPPLE_RING_WIDTH * 2);
+            const falloff =
+              1 - Math.abs(dist - r.radius) / (RIPPLE_RING_WIDTH * 2);
             const value = wave * Math.max(falloff, 0) * r.amplitude;
 
             g[cy * w + cx] = Math.min(1, g[cy * w + cx] + value);
@@ -111,13 +112,13 @@ export function AsciiOrangeBackground() {
         }
       }
 
-      // Render
+      // render orange ASCII
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       ctx.font = `900 ${CELL_SIZE - 1}px monospace`;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
 
-      const charCount = ASCII_CHARS.length - 1; // skip space at index 0
+      const charCount = ASCII_CHARS.length - 1;
 
       for (let cy = 0; cy < h; cy++) {
         for (let cx = 0; cx < w; cx++) {
@@ -128,12 +129,51 @@ export function AsciiOrangeBackground() {
           const char = ASCII_CHARS[charIdx];
 
           ctx.globalAlpha = Math.min(val * 1.2, 0.9);
-          ctx.fillStyle = '#2563eb';
-          ctx.fillText(char, cx * CELL_SIZE + CELL_SIZE / 2, cy * CELL_SIZE + CELL_SIZE / 2);
+          ctx.fillStyle = "#FF6900";
+          ctx.fillText(
+            char,
+            cx * CELL_SIZE + CELL_SIZE / 2,
+            cy * CELL_SIZE + CELL_SIZE / 2,
+          );
         }
       }
 
       ctx.globalAlpha = 1;
+
+      // update blue title overlay clip-path
+      const overlay = blueOverlayRef?.current;
+      if (overlay) {
+        const rect = overlay.getBoundingClientRect();
+        const parts: string[] = [];
+
+        for (let cy = 0; cy < h; cy++) {
+          for (let cx = 0; cx < w; cx++) {
+            if (g[cy * w + cx] < CLIP_THRESHOLD) continue;
+
+            const cellX = cx * CELL_SIZE;
+            const cellY = cy * CELL_SIZE;
+
+            // skipp cells that don't overlap the overlay element
+            if (
+              cellX + CELL_SIZE <= rect.left ||
+              cellX >= rect.right ||
+              cellY + CELL_SIZE <= rect.top ||
+              cellY >= rect.bottom
+            )
+              continue;
+
+            // coordinates relative to overlay element's top-left
+            const lx = Math.round(cellX - rect.left);
+            const ly = Math.round(cellY - rect.top);
+            const s = CELL_SIZE;
+            parts.push(`M${lx} ${ly}H${lx + s}V${ly + s}H${lx}Z`);
+          }
+        }
+
+        overlay.style.clipPath =
+          parts.length > 0 ? `path("${parts.join(" ")}")` : "inset(0 100% 0 0)";
+      }
+
       rafRef.current = requestAnimationFrame(animate);
     };
 
@@ -141,10 +181,10 @@ export function AsciiOrangeBackground() {
 
     return () => {
       cancelAnimationFrame(rafRef.current);
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('resize', resize);
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("resize", resize);
     };
-  }, [handleMouseMove]);
+  }, [handleMouseMove, blueOverlayRef]);
 
   return (
     <canvas

@@ -35,7 +35,7 @@ export function GameScreen() {
 
   const [timeRemaining, setTimeRemaining] = useState<number>(0);
   const [confidence, setConfidence] = useState<number>(0);
-  const [countdown, setCountdown] = useState<number | "GO!" | null>(3);
+  const [countdown, setCountdown] = useState<number | "go!" | null>(3);
   const [winnerOverlay, setWinnerOverlay] = useState<{
     name: string;
     isYou: boolean;
@@ -79,7 +79,7 @@ export function GameScreen() {
 
   // pre game countdown
   useEffect(() => {
-    const steps: Array<number | "GO!"> = [3, 2, 1, "GO!"];
+    const steps: Array<number | "go!"> = [3, 2, 1, "go!"];
     let i = 0;
     const tick = () => {
       setCountdown(steps[i]);
@@ -235,10 +235,10 @@ export function GameScreen() {
               className="animate-count-pop font-display font-bold leading-none"
               style={{
                 fontSize:
-                  countdown === "GO!"
+                  countdown === "go!"
                     ? "clamp(3rem,15vw,8rem)"
                     : "clamp(5rem,25vw,14rem)",
-                color: countdown === "GO!" ? "#FF6900" : "#111111",
+                color: countdown === "go!" ? "#FF6900" : "#111111",
               }}
             >
               {countdown}
@@ -246,10 +246,10 @@ export function GameScreen() {
           ) : (
             <div className="animate-pulse">
               <div className="text-3xl font-display font-bold text-gray-900 mb-2">
-                GET READY
+                get ready
               </div>
-              <div className="text-gray-400 text-sm tracking-widest uppercase">
-                First round starting...
+              <div className="text-gray-400 text-sm tracking-widest">
+                first round starting...
               </div>
             </div>
           )}
@@ -263,71 +263,71 @@ export function GameScreen() {
       <canvas ref={canvasRef} className="hidden" />
 
       {winnerOverlay && (
-        <div className="absolute inset-0 z-50 flex items-center justify-center bg-white/80 backdrop-blur-sm animate-fade-in">
-          <div className="text-center px-8">
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-white animate-fade-in">
+          <div className="text-center px-8 animate-overlay">
             <div className="w-10 h-1 bg-[#FF6900] mx-auto mb-4" />
             <div className="text-4xl font-display font-bold text-gray-900 mb-1">
               {winnerOverlay.isYou
-                ? "YOU FOUND IT!"
-                : `${winnerOverlay.name} WINS!`}
+                ? "you found it!"
+                : `${winnerOverlay.name} wins!`}
             </div>
             <div className="text-base text-gray-500 mb-4">
               {winnerOverlay.objectName}
             </div>
-            <div className="text-gray-400 animate-pulse text-xs tracking-[0.15em] uppercase">
-              Next round starting...
+            <div className="text-gray-400 animate-pulse text-xs tracking-[0.15em]">
+              next round starting...
             </div>
           </div>
         </div>
       )}
 
       {timeoutOverlay && (
-        <div className="absolute inset-0 z-50 flex items-center justify-center bg-white/80 backdrop-blur-sm animate-fade-in">
-          <div className="text-center px-8">
-            <div className="w-10 h-1 bg-gray-400 mx-auto mb-4" />
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-white animate-fade-in">
+          <div className="text-center px-8 animate-overlay">
+            <div className="w-10 h-1 bg-gray-300 mx-auto mb-4" />
             <div className="text-4xl font-display font-bold text-gray-900 mb-1">
-              TIME'S UP
+              time's up
             </div>
             <div className="text-base text-gray-500 mb-4">
-              Nobody found the {timeoutOverlay}
+              nobody found the {timeoutOverlay}
             </div>
-            <div className="text-gray-400 animate-pulse text-xs tracking-[0.15em] uppercase">
-              Next round starting...
+            <div className="text-gray-400 animate-pulse text-xs tracking-[0.15em]">
+              next round starting...
             </div>
           </div>
         </div>
       )}
 
       {isDisconnected && (
-        <div className="absolute inset-0 z-[60] flex items-center justify-center bg-white/90 backdrop-blur-sm animate-fade-in">
+        <div className="absolute inset-0 z-[60] flex items-center justify-center bg-white animate-fade-in">
           <div className="text-center px-8">
             <div className="text-2xl font-display font-bold text-gray-900 mb-1">
-              CONNECTION LOST
+              connection lost
             </div>
             <div className="text-gray-400 text-sm animate-pulse">
-              Reconnecting...
+              reconnecting...
             </div>
           </div>
         </div>
       )}
 
       {reconnectFailed && (
-        <div className="absolute inset-0 z-[60] flex items-center justify-center bg-white/90 backdrop-blur-sm animate-fade-in">
+        <div className="absolute inset-0 z-[60] flex items-center justify-center bg-white animate-fade-in">
           <div className="text-center px-8">
             <div className="text-2xl font-display font-bold text-gray-900 mb-2">
-              DISCONNECTED
+              disconnected
             </div>
             <div className="text-gray-500 text-sm mb-5">
-              Could not reconnect to the server.
+              could not reconnect to the server.
             </div>
             <button
               onClick={() => {
                 socketService.disconnect();
                 navigate("/");
               }}
-              className="px-6 py-2.5 bg-gray-900 text-white font-bold text-xs tracking-widest uppercase hover:bg-gray-700 active:scale-95 transition-all"
+              className="px-6 py-2.5 bg-gray-900 text-white font-bold text-xs tracking-widest hover:bg-gray-700 active:scale-95 transition-all"
             >
-              Back to Home
+              back to home
             </button>
           </div>
         </div>
@@ -336,8 +336,8 @@ export function GameScreen() {
       <div className="bg-white border-b border-gray-200 px-5 py-3 flex items-center justify-between shrink-0">
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
-            <span className="text-[10px] font-bold text-gray-400 tracking-[0.12em] uppercase">
-              Round
+            <span className="text-[10px] font-bold text-gray-400 tracking-[0.12em]">
+              round
             </span>
             <span className="text-sm font-bold text-[#FF6900]">
               {currentRound.roundNumber}
@@ -345,8 +345,8 @@ export function GameScreen() {
           </div>
           <div className="w-px h-3.5 bg-gray-200" />
           <div className="flex items-center gap-2">
-            <span className="text-[10px] font-bold text-gray-400 tracking-[0.12em] uppercase">
-              Time
+            <span className="text-[10px] font-bold text-gray-400 tracking-[0.12em]">
+              time
             </span>
             <span
               className={`text-sm font-bold tabular-nums ${
@@ -358,8 +358,8 @@ export function GameScreen() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-[10px] font-bold text-gray-400 tracking-[0.12em] uppercase">
-            Score
+          <span className="text-[10px] font-bold text-gray-400 tracking-[0.12em]">
+            score
           </span>
           <span className="text-sm font-bold text-[#FF6900]">{myScore}</span>
         </div>
@@ -375,9 +375,12 @@ export function GameScreen() {
         />
       </div>
 
-      <div className="bg-[#FF6900] px-4 py-3 shrink-0 text-center">
-        <div className="text-[9px] font-bold text-white/60 tracking-[0.25em] uppercase mb-0.5">
-          Find This
+      <div
+        key={currentRound.id}
+        className="bg-[#FF6900] px-4 py-3 shrink-0 text-center animate-stamp"
+      >
+        <div className="text-[9px] font-bold text-white/60 tracking-[0.25em] mb-0.5">
+          find this
         </div>
         <div className="text-xl md:text-2xl font-display font-bold text-white tracking-wide">
           {currentRound.displayName}
@@ -440,13 +443,13 @@ export function GameScreen() {
 
                 {isWinner && (
                   <div className="absolute top-2 right-2 bg-[#FF6900] text-white text-[10px] font-bold px-2 py-0.5 tracking-wider">
-                    +1 PT
+                    +1 pt
                   </div>
                 )}
 
                 {isLeader && !isWinner && (
                   <div className="absolute top-2 right-2 bg-white/90 text-[#FF6900] text-[9px] font-bold px-1.5 py-0.5 tracking-wider">
-                    1ST
+                    1st
                   </div>
                 )}
               </div>
@@ -461,7 +464,7 @@ export function GameScreen() {
                   )}
                 </span>
                 <span className="text-sm font-bold text-[#FF6900] shrink-0 ml-2 leading-none tabular-nums">
-                  {player.score} PTS
+                  {player.score} pts
                 </span>
               </div>
             </div>
@@ -471,8 +474,8 @@ export function GameScreen() {
 
       <div className="bg-white border-t border-gray-200 px-5 py-2.5 shrink-0">
         <div className="flex items-center gap-3 mb-1.5">
-          <span className="text-[10px] font-bold text-gray-400 tracking-[0.12em] uppercase shrink-0">
-            COLD
+          <span className="text-[10px] font-bold text-gray-400 tracking-[0.12em] shrink-0">
+            cold
           </span>
           <div className="flex-1 bg-gray-100 h-1.5 rounded-full overflow-hidden">
             <div
@@ -483,8 +486,8 @@ export function GameScreen() {
               }}
             />
           </div>
-          <span className="text-[10px] font-bold text-gray-400 tracking-[0.12em] uppercase shrink-0">
-            HOT
+          <span className="text-[10px] font-bold text-gray-400 tracking-[0.12em] shrink-0">
+            hot
           </span>
           <span className="text-[11px] font-bold text-gray-500 tabular-nums w-8 text-right shrink-0">
             {Math.round(confidence * 100)}%
@@ -492,8 +495,8 @@ export function GameScreen() {
         </div>
 
         <div className="flex items-center gap-3">
-          <span className="text-[10px] font-bold text-gray-400 tracking-[0.12em] uppercase w-14 shrink-0">
-            Rank
+          <span className="text-[10px] font-bold text-gray-400 tracking-[0.12em] w-14 shrink-0">
+            rank
           </span>
           <div className="flex items-center gap-4 overflow-x-auto scrollbar-none">
             {sortedPlayers.map((p, idx) => (
