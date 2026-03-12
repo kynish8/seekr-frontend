@@ -156,7 +156,6 @@ export function LobbyScreen() {
           )}
         </div>
 
-        {/* Settings — host only */}
         {isHost && (
           <div
             className="w-full max-w-sm mb-10"
@@ -215,7 +214,6 @@ export function LobbyScreen() {
           </div>
         )}
 
-        {/* Start / wait */}
         <div
           className="w-full max-w-sm"
           style={{ transform: `translate(${p.x * -2}px, ${p.y * -1.5}px)` }}

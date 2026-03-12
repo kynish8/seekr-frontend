@@ -333,24 +333,24 @@ export function GameScreen() {
         </div>
       )}
 
-      <div className="bg-white border-b border-gray-200 px-5 py-3 flex items-center justify-between shrink-0">
-        <div className="flex items-center gap-4">
+      <div className="bg-white border-b border-gray-200 px-5 py-3.5 flex items-center justify-between shrink-0">
+        <div className="flex items-center gap-5">
           <div className="flex items-center gap-2">
-            <span className="text-[10px] font-bold text-gray-400 tracking-[0.12em]">
+            <span className="text-xs font-bold text-[#1a1a1a]/50 tracking-widest">
               round
             </span>
-            <span className="text-sm font-bold text-[#FF6900]">
+            <span className="text-base font-bold text-[#FF6900]">
               {currentRound.roundNumber}
             </span>
           </div>
-          <div className="w-px h-3.5 bg-gray-200" />
+          <div className="w-px h-4 bg-gray-200" />
           <div className="flex items-center gap-2">
-            <span className="text-[10px] font-bold text-gray-400 tracking-[0.12em]">
+            <span className="text-xs font-bold text-[#1a1a1a]/50 tracking-widest">
               time
             </span>
             <span
-              className={`text-sm font-bold tabular-nums ${
-                timerRed ? "text-red-500 animate-pulse" : "text-gray-900"
+              className={`text-base font-bold tabular-nums ${
+                timerRed ? "text-red-500 animate-pulse" : "text-[#1a1a1a]"
               }`}
             >
               {timeRemaining}s
@@ -358,10 +358,10 @@ export function GameScreen() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-[10px] font-bold text-gray-400 tracking-[0.12em]">
+          <span className="text-xs font-bold text-[#1a1a1a]/50 tracking-widest">
             score
           </span>
-          <span className="text-sm font-bold text-[#FF6900]">{myScore}</span>
+          <span className="text-base font-bold text-[#FF6900]">{myScore}</span>
         </div>
       </div>
 
@@ -472,9 +472,9 @@ export function GameScreen() {
         })}
       </div>
 
-      <div className="bg-white border-t border-gray-200 px-5 py-2.5 shrink-0">
-        <div className="flex items-center gap-3 mb-1.5">
-          <span className="text-[10px] font-bold text-gray-400 tracking-[0.12em] shrink-0">
+      <div className="bg-white border-t border-gray-200 px-5 py-3 shrink-0">
+        <div className="flex items-center gap-3 mb-2">
+          <span className="text-xs font-bold text-[#1a1a1a]/50 tracking-widest shrink-0">
             cold
           </span>
           <div className="flex-1 bg-gray-100 h-1.5 rounded-full overflow-hidden">
@@ -486,32 +486,32 @@ export function GameScreen() {
               }}
             />
           </div>
-          <span className="text-[10px] font-bold text-gray-400 tracking-[0.12em] shrink-0">
+          <span className="text-xs font-bold text-[#1a1a1a]/50 tracking-widest shrink-0">
             hot
           </span>
-          <span className="text-[11px] font-bold text-gray-500 tabular-nums w-8 text-right shrink-0">
+          <span className="text-xs font-bold text-[#1a1a1a]/60 tabular-nums w-8 text-right shrink-0">
             {Math.round(confidence * 100)}%
           </span>
         </div>
 
         <div className="flex items-center gap-3">
-          <span className="text-[10px] font-bold text-gray-400 tracking-[0.12em] w-14 shrink-0">
+          <span className="text-xs font-bold text-[#1a1a1a]/50 tracking-widest w-10 shrink-0">
             rank
           </span>
           <div className="flex items-center gap-4 overflow-x-auto scrollbar-none">
             {sortedPlayers.map((p, idx) => (
               <div key={p.id} className="flex items-center gap-1 shrink-0">
-                <span className="text-[11px] text-gray-400">{idx + 1}.</span>
+                <span className="text-xs text-[#1a1a1a]/40">{idx + 1}.</span>
                 <span
-                  className={`text-[11px] font-bold ${
+                  className={`text-xs font-bold ${
                     p.id === currentPlayerId
                       ? "text-[#FF6900]"
-                      : "text-gray-700"
+                      : "text-[#1a1a1a]"
                   }`}
                 >
                   {p.name}
                 </span>
-                <span className="text-[11px] text-gray-400 tabular-nums">
+                <span className="text-xs text-[#1a1a1a]/50 tabular-nums">
                   {p.score}
                 </span>
               </div>

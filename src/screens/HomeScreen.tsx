@@ -92,7 +92,7 @@ export function HomeScreen() {
         >
           <div className="relative inline-block">
             <h1 className="text-7xl md:text-8xl xl:text-9xl font-bold leading-[0.9] tracking-tight text-[#FF6900] select-none">
-              hullabaloo
+              hullabaloo.
             </h1>
             <h1
               ref={blueOverlayRef}
